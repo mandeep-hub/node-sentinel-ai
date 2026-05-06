@@ -22,7 +22,3 @@ Compliance monitoring platform for digital asset transactions, used by complianc
 - Shared components: `packages/ui`
 - Environment variables: `apps/dashboard/.env.local`
 - Only compliance analysts access the dashboard
-
-## Backlog
-
-- **NODE-9** (in progress): Implement Auth0 auth for admin dashboard
