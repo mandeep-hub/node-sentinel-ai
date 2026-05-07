@@ -3,6 +3,7 @@ import cors from "cors";
 
 import { generateTransaction } from "./services/transactionGenerator";
 import { updateCryptoPrices } from "./services/fxService";
+import { transactions } from "./services/transactionStore";
 
 const app = express();
 
@@ -19,8 +20,6 @@ app.get("/", (req, res) => {
   res.send("Node Sentinel AI Transaction Engine 🚀");
 });
 
-// Generate a single simulated transaction
-
 app.get("/transactions/generate", async (req, res) => {
   try {
     const transaction = await generateTransaction();
@@ -35,17 +34,15 @@ app.get("/transactions/generate", async (req, res) => {
   }
 });
 
-// Generate multiple simulated transactions
-
 app.get("/transactions/generate-many", async (req, res) => {
   try {
-    const transactions = [];
+    const generatedTransactions = [];
 
     for (let i = 0; i < 20; i++) {
-      transactions.push(await generateTransaction());
+      generatedTransactions.push(await generateTransaction());
     }
 
-    res.json(transactions);
+    res.json(generatedTransactions);
   } catch (error) {
     console.error(error);
 
@@ -53,6 +50,12 @@ app.get("/transactions/generate-many", async (req, res) => {
       error: "Failed to generate transactions",
     });
   }
+});
+
+// List all stored transactions
+
+app.get("/transactions", (req, res) => {
+  res.json(transactions);
 });
 
 const PORT = 5000;

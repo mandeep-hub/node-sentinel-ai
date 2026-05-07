@@ -1,11 +1,10 @@
 import { Transaction } from "../models/Transaction";
 import { getCryptoPrice, PriceCache } from "./fxService";
+import { transactions } from "./transactionStore";
 
 const countries = ["US", "UK", "DE", "IR"];
 const currencies = ["USD", "EUR", "GBP"];
 const cryptoTypes = ["BTC", "ETH", "SOL"] as const;
-
-let currentId = 1;
 
 export async function generateTransaction(): Promise<Transaction> {
   const fiatAmount = Math.floor(Math.random() * 50000);
@@ -19,8 +18,8 @@ export async function generateTransaction(): Promise<Transaction> {
 
   const cryptoAmount = Number((fiatAmount / cryptoPrice).toFixed(4));
 
-  return {
-    id: currentId++,
+  const transaction: Transaction = {
+    id: crypto.randomUUID(),
     userId: Math.floor(Math.random() * 10) + 1,
     transactionType,
     cryptoType,
@@ -30,4 +29,8 @@ export async function generateTransaction(): Promise<Transaction> {
     country: countries[Math.floor(Math.random() * countries.length)],
     createdAt: new Date(),
   };
+
+  transactions.push(transaction);
+
+  return transaction;
 }

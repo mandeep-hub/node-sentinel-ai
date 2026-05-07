@@ -1,5 +1,5 @@
 export interface Transaction {
-  id: number;
+  id: string;
   userId: number;
   transactionType: "BUY" | "SELL";
   cryptoType: string;
@@ -7,6 +7,5 @@ export interface Transaction {
   cryptoAmount: number;
   currency: string;
   country: string;
-  riskLevel: "LOW" | "MEDIUM" | "HIGH";
   createdAt: Date;
 }
