@@ -52,10 +52,24 @@ app.get("/transactions/generate-many", async (req, res) => {
   }
 });
 
-// List all stored transactions
-
 app.get("/transactions", (req, res) => {
-  res.json(transactions);
+  const fromId = req.query.fromId as string;
+
+  if (!fromId) {
+    return res.json(transactions);
+  }
+
+  const transactionIndex = transactions.findIndex(
+    (transaction) => transaction.id === fromId,
+  );
+
+  if (transactionIndex === -1) {
+    return res.json(transactions);
+  }
+
+  const filteredTransactions = transactions.slice(transactionIndex + 1);
+
+  res.json(filteredTransactions);
 });
 
 const PORT = 5000;
