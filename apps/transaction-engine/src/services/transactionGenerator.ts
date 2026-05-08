@@ -1,6 +1,5 @@
 import { Transaction } from "../models/Transaction";
 import { getCryptoPrice, PriceCache } from "./fxService";
-import { transactions } from "./transactionStore";
 
 const countries = ["US", "UK", "DE", "IR"];
 const currencies = ["USD", "EUR", "GBP"];
@@ -29,8 +28,6 @@ export async function generateTransaction(): Promise<Transaction> {
     country: countries[Math.floor(Math.random() * countries.length)],
     createdAt: new Date(),
   };
-
-  transactions.push(transaction);
 
   return transaction;
 }

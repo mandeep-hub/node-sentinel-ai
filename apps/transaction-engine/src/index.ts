@@ -10,6 +10,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+setInterval(async () => {
+  try {
+    await updateCryptoPrices();
+
+    const transaction = await generateTransaction();
+
+    transactions.push(transaction);
+
+    console.log("Auto-generated transaction:", transaction.id);
+  } catch (error) {
+    console.error("Failed to auto-generate transaction:", error);
+  }
+}, 40000);
+
 app.get("/", (req, res) => {
   res.send("Node Sentinel AI Transaction Engine 🚀");
 });
