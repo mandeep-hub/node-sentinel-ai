@@ -4,11 +4,7 @@ export type PriceCache = {
   SOL: number;
 };
 
-let priceCache: PriceCache = {
-  BTC: 80000,
-  ETH: 2000,
-  SOL: 90,
-};
+let priceCache: PriceCache | null = null;
 
 export async function updateCryptoPrices() {
   try {
@@ -30,10 +26,14 @@ export async function updateCryptoPrices() {
       SOL: data.solana.usd,
     };
   } catch (error) {
-    console.warn("Using existing cached prices due to API issue.");
+    console.warn("Failed to update crypto prices.");
   }
 }
 
 export function getCryptoPrice(crypto: keyof PriceCache): number {
+  if (!priceCache) {
+    throw new Error("Crypto prices are not loaded yet.");
+  }
+
   return priceCache[crypto];
 }
