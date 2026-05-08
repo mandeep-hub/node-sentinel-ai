@@ -10,19 +10,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-updateCryptoPrices();
-
-setInterval(() => {
-  updateCryptoPrices();
-}, 30000);
-
 app.get("/", (req, res) => {
   res.send("Node Sentinel AI Transaction Engine 🚀");
 });
 
-app.get("/transactions/generate", async (req, res) => {
+app.post("/transactions/generate", async (req, res) => {
   try {
+    await updateCryptoPrices();
+
     const transaction = await generateTransaction();
+
+    transactions.push(transaction);
 
     res.json(transaction);
   } catch (error) {
@@ -34,12 +32,18 @@ app.get("/transactions/generate", async (req, res) => {
   }
 });
 
-app.get("/transactions/generate-many", async (req, res) => {
+app.post("/transactions/generate-many", async (req, res) => {
   try {
+    await updateCryptoPrices();
+
     const generatedTransactions = [];
 
     for (let i = 0; i < 20; i++) {
-      generatedTransactions.push(await generateTransaction());
+      const transaction = await generateTransaction();
+
+      transactions.push(transaction);
+
+      generatedTransactions.push(transaction);
     }
 
     res.json(generatedTransactions);
@@ -64,7 +68,9 @@ app.get("/transactions", (req, res) => {
   );
 
   if (transactionIndex === -1) {
-    return res.json(transactions);
+    return res.status(404).json({
+      error: "Transaction ID not found",
+    });
   }
 
   const filteredTransactions = transactions.slice(transactionIndex + 1);
