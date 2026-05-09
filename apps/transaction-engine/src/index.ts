@@ -1,9 +1,10 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 
 import { generateTransaction } from "./services/transactionGenerator";
 import { updateCryptoPrices } from "./services/fxService";
-import { transactions } from "./services/transactionStore";
+import { transactionStore } from "./services/transactionStore";
 
 const app = express();
 
@@ -16,7 +17,9 @@ setInterval(async () => {
 
     const transaction = await generateTransaction();
 
-    transactions.push(transaction);
+    await transactionStore.create({
+      data: transaction,
+    });
 
     console.log("Auto-generated transaction:", transaction.id);
   } catch (error) {
@@ -34,7 +37,9 @@ app.post("/transactions/generate", async (req, res) => {
 
     const transaction = await generateTransaction();
 
-    transactions.push(transaction);
+    await transactionStore.create({
+      data: transaction,
+    });
 
     res.json(transaction);
   } catch (error) {
@@ -55,7 +60,9 @@ app.post("/transactions/generate-many", async (req, res) => {
     for (let i = 0; i < 20; i++) {
       const transaction = await generateTransaction();
 
-      transactions.push(transaction);
+      await transactionStore.create({
+        data: transaction,
+      });
 
       generatedTransactions.push(transaction);
     }
@@ -70,26 +77,39 @@ app.post("/transactions/generate-many", async (req, res) => {
   }
 });
 
-app.get("/transactions", (req, res) => {
-  const fromId = req.query.fromId as string;
+app.get("/transactions", async (req, res) => {
+  try {
+    const fromId = req.query.fromId as string;
 
-  if (!fromId) {
-    return res.json(transactions);
-  }
+    const allTransactions = await transactionStore.findMany({
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
 
-  const transactionIndex = transactions.findIndex(
-    (transaction) => transaction.id === fromId,
-  );
+    if (!fromId) {
+      return res.json(allTransactions);
+    }
+    const transactionIndex = allTransactions.findIndex(
+      (transaction: { id: string }) => transaction.id === fromId,
+    );
 
-  if (transactionIndex === -1) {
-    return res.status(404).json({
-      error: "Transaction ID not found",
+    if (transactionIndex === -1) {
+      return res.status(404).json({
+        error: "Transaction ID not found",
+      });
+    }
+
+    const filteredTransactions = allTransactions.slice(transactionIndex + 1);
+
+    res.json(filteredTransactions);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to retrieve transactions",
     });
   }
-
-  const filteredTransactions = transactions.slice(transactionIndex + 1);
-
-  res.json(filteredTransactions);
 });
 
 const PORT = 5000;

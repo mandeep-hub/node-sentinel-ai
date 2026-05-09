@@ -1,3 +1,3 @@
-import { Transaction } from "../models/Transaction";
+import { prisma } from "./prisma";
 
-export const transactions: Transaction[] = [];
+export const transactionStore = prisma.transaction;
