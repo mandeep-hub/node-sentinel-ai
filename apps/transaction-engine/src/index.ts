@@ -1,13 +1,120 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
+
+import { generateTransaction } from "./services/transactionGenerator";
+import { updateCryptoPrices } from "./services/fxService";
+import { transactionStore } from "./services/transactionStore";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+if (!process.env.COINGECKO_API_KEY) {
+  console.warn("⚠️ COINGECKO_API_KEY is missing in .env");
+}
+
+setInterval(async () => {
+  try {
+    await updateCryptoPrices();
+
+    const transaction = await generateTransaction();
+
+    await transactionStore.create({
+      data: transaction,
+    });
+
+    console.log("Auto-generated transaction:", transaction.id);
+  } catch (error) {
+    console.error("Failed to auto-generate transaction:", error);
+  }
+}, 40000);
+
 app.get("/", (req, res) => {
   res.send("Node Sentinel AI Transaction Engine 🚀");
+});
+
+app.post("/transactions/generate", async (req, res) => {
+  try {
+    await updateCryptoPrices();
+
+    const transaction = await generateTransaction();
+
+    await transactionStore.create({
+      data: transaction,
+    });
+
+    res.json(transaction);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to generate transaction",
+    });
+  }
+});
+
+app.post("/transactions/generate-many", async (req, res) => {
+  try {
+    await updateCryptoPrices();
+
+    const generatedTransactions = [];
+
+    for (let i = 0; i < 20; i++) {
+      const transaction = await generateTransaction();
+
+      await transactionStore.create({
+        data: transaction,
+      });
+
+      generatedTransactions.push(transaction);
+    }
+
+    res.json(generatedTransactions);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to generate transactions",
+    });
+  }
+});
+
+app.get("/transactions", async (req, res) => {
+  try {
+    const fromId = req.query.fromId as string;
+
+    const allTransactions = await transactionStore.findMany({
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    if (!fromId) {
+      return res.json(allTransactions);
+    }
+
+    const transactionIndex = allTransactions.findIndex(
+      (transaction: { id: string }) => transaction.id === fromId,
+    );
+
+    if (transactionIndex === -1) {
+      return res.status(404).json({
+        error: "Transaction ID not found",
+      });
+    }
+
+    const filteredTransactions = allTransactions.slice(transactionIndex + 1);
+
+    res.json(filteredTransactions);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to retrieve transactions",
+    });
+  }
 });
 
 const PORT = 5000;
