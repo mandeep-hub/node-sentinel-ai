@@ -6,10 +6,17 @@ export type PriceCache = {
 
 let priceCache: PriceCache | null = null;
 
+const BASE_URL = "https://api.coingecko.com/api/v3";
+
 export async function updateCryptoPrices() {
   try {
     const response = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd",
+      `${BASE_URL}/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd`,
+      {
+        headers: {
+          "x-cg-demo-api-key": process.env.COINGECKO_API_KEY || "",
+        },
+      },
     );
 
     if (!response.ok) {
@@ -26,7 +33,7 @@ export async function updateCryptoPrices() {
       SOL: data.solana.usd,
     };
   } catch (error) {
-    console.warn("Failed to update crypto prices.");
+    console.warn("Failed to update crypto prices.", error);
   }
 }
 

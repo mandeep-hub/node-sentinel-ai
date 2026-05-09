@@ -11,6 +11,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+if (!process.env.COINGECKO_API_KEY) {
+  console.warn("⚠️ COINGECKO_API_KEY is missing in .env");
+}
+
 setInterval(async () => {
   try {
     await updateCryptoPrices();
@@ -90,6 +94,7 @@ app.get("/transactions", async (req, res) => {
     if (!fromId) {
       return res.json(allTransactions);
     }
+
     const transactionIndex = allTransactions.findIndex(
       (transaction: { id: string }) => transaction.id === fromId,
     );
