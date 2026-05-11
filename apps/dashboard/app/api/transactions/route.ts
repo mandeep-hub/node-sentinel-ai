@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { startPoller, getTransactions } from "@/lib/transactionPoller";
+import { fetchTransactions } from "@/lib/transactionPoller";
 
 export async function GET() {
-  startPoller();
-  return NextResponse.json(getTransactions());
+  try {
+    const transactions = await fetchTransactions();
+    return NextResponse.json(transactions);
+  } catch {
+    return NextResponse.json({ error: "Failed to fetch transactions" }, { status: 500 });
+  }
 }

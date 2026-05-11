@@ -1,71 +1,124 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
+
+import { generateTransaction } from "./services/transactionGenerator";
+import { updateCryptoPrices } from "./services/fxService";
+import { transactionStore } from "./services/transactionStore";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-interface Transaction {
-  id: number;
-  userId: string;
-  type: "deposit" | "transfer";
-  amount: number;
-  currency: "USD" | "BTC" | "ETH";
-  timestamp: string;
-  status: "completed" | "pending";
+if (!process.env.COINGECKO_API_KEY) {
+  console.warn("⚠️ COINGECKO_API_KEY is missing in .env");
 }
 
-const transactions: Transaction[] = [];
-let nextId = 1;
+setInterval(async () => {
+  try {
+    await updateCryptoPrices();
 
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+    const transaction = await generateTransaction();
 
-function generateTransaction(): Transaction {
-  const transaction: Transaction = {
-    id: nextId++,
-    userId: `user_${Math.floor(Math.random() * 10) + 1}`,
-    type: pick(["deposit", "transfer"]),
-    amount: Math.round((Math.random() * 9900 + 100) * 100) / 100,
-    currency: pick(["USD", "BTC", "ETH"]),
-    timestamp: new Date().toISOString(),
-    status: pick(["completed", "pending"]),
-  };
-  transactions.push(transaction);
-  return transaction;
-}
+    await transactionStore.create({
+      data: transaction,
+    });
+
+    console.log("Auto-generated transaction:", transaction.id);
+  } catch (error) {
+    console.error("Failed to auto-generate transaction:", error);
+  }
+}, 40000);
 
 app.get("/", (req, res) => {
   res.send("Node Sentinel AI Transaction Engine 🚀");
 });
 
-app.get("/transactions", (req, res) => {
-  const fromId = req.query.fromId;
-  if (fromId !== undefined) {
-    const fromIdNum = Number(fromId);
-    res.json(transactions.filter((t) => t.id > fromIdNum));
-  } else {
-    res.json(transactions);
+app.post("/transactions/generate", async (req, res) => {
+  try {
+    await updateCryptoPrices();
+
+    const transaction = await generateTransaction();
+
+    await transactionStore.create({
+      data: transaction,
+    });
+
+    res.json(transaction);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to generate transaction",
+    });
   }
 });
 
-app.post("/transactions/generate", (req, res) => {
-  res.json(generateTransaction());
-});
+app.post("/transactions/generate-many", async (req, res) => {
+  try {
+    await updateCryptoPrices();
 
-app.post("/transactions/generate-many", (req, res) => {
-  const newTransactions: Transaction[] = [];
-  for (let i = 0; i < 20; i++) {
-    newTransactions.push(generateTransaction());
+    const generatedTransactions = [];
+
+    for (let i = 0; i < 20; i++) {
+      const transaction = await generateTransaction();
+
+      await transactionStore.create({
+        data: transaction,
+      });
+
+      generatedTransactions.push(transaction);
+    }
+
+    res.json(generatedTransactions);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to generate transactions",
+    });
   }
-  res.json(newTransactions);
 });
 
-const PORT = 5001;
+app.get("/transactions", async (req, res) => {
+  try {
+    const fromId = req.query.fromId as string;
+
+    const allTransactions = await transactionStore.findMany({
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    if (!fromId) {
+      return res.json(allTransactions);
+    }
+
+    const transactionIndex = allTransactions.findIndex(
+      (transaction: { id: string }) => transaction.id === fromId,
+    );
+
+    if (transactionIndex === -1) {
+      return res.status(404).json({
+        error: "Transaction ID not found",
+      });
+    }
+
+    const filteredTransactions = allTransactions.slice(transactionIndex + 1);
+
+    res.json(filteredTransactions);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to retrieve transactions",
+    });
+  }
+});
+
+const PORT = 5000;
 
 app.listen(PORT, () => {
   console.log(`Transaction Engine running on http://localhost:${PORT}`);
-  setInterval(generateTransaction, 30_000);
 });
