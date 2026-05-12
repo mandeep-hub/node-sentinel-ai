@@ -5,6 +5,7 @@ import cors from "cors";
 import { generateTransaction } from "./services/transactionGenerator";
 import { updateCryptoPrices } from "./services/fxService";
 import { transactionStore } from "./services/transactionStore";
+import { convertCurrency } from "./services/exchangeRateService";
 
 const app = express();
 
@@ -12,7 +13,11 @@ app.use(cors());
 app.use(express.json());
 
 if (!process.env.COINGECKO_API_KEY) {
-  console.warn("⚠️ COINGECKO_API_KEY is missing in .env");
+  console.log("COINGECKO_API_KEY is missing in .env");
+}
+
+if (!process.env.CURRENCY_FREAKS_API_KEY) {
+  console.log("CURRENCY_FREAKS_API_KEY is missing in .env");
 }
 
 setInterval(async () => {
@@ -47,7 +52,7 @@ app.post("/transactions/generate", async (req, res) => {
 
     res.json(transaction);
   } catch (error) {
-    console.error(error);
+    console.error("Generate transaction error:", error);
 
     res.status(500).json({
       error: "Failed to generate transaction",
@@ -73,7 +78,7 @@ app.post("/transactions/generate-many", async (req, res) => {
 
     res.json(generatedTransactions);
   } catch (error) {
-    console.error(error);
+    console.error("Generate many transactions error:", error);
 
     res.status(500).json({
       error: "Failed to generate transactions",
@@ -109,10 +114,53 @@ app.get("/transactions", async (req, res) => {
 
     res.json(filteredTransactions);
   } catch (error) {
-    console.error(error);
+    console.error("Retrieve transactions error:", error);
 
     res.status(500).json({
       error: "Failed to retrieve transactions",
+    });
+  }
+});
+
+app.get("/convert", async (req, res) => {
+  try {
+    const amount = Number(req.query.amount);
+    const from = req.query.from as string;
+    const to = req.query.to as string;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        error: "Invalid amount",
+      });
+    }
+
+    if (!from || !to) {
+      return res.status(400).json({
+        error: "Missing currency parameters",
+      });
+    }
+
+    const currencyRegex = /^[A-Z]{3}$/;
+
+    if (!currencyRegex.test(from) || !currencyRegex.test(to)) {
+      return res.status(400).json({
+        error: "Invalid currency code",
+      });
+    }
+
+    const converted = await convertCurrency(amount, from, to);
+
+    res.json({
+      from,
+      to,
+      originalAmount: amount,
+      convertedAmount: converted,
+    });
+  } catch (error) {
+    console.error("Conversion error:", error);
+
+    res.status(400).json({
+      error: error instanceof Error ? error.message : "Conversion failed",
     });
   }
 });
