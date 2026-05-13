@@ -5,7 +5,7 @@ let lastProcessedTransactionId: string | null = null;
 export async function checkNewTransactions() {
   try {
     const baseUrl =
-      process.env.TRANSACTION_ENGINE_URL || "http://localhost:5000";
+      process.env.TRANSACTION_ENGINE_URL || "http://localhost:5100";
 
     let url = `${baseUrl}/transactions`;
 

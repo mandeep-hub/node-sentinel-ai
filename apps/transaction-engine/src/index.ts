@@ -187,6 +187,26 @@ app.patch("/cases/:caseId/status", async (req, res) => {
     const { caseId } = req.params;
     const { status } = req.body;
 
+    const allowedStatuses = ["OPEN", "PROCESSING", "CLOSED"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        error: "Invalid status. Allowed values are OPEN, PROCESSING, CLOSED",
+      });
+    }
+
+    const existingCase = await prisma.case.findUnique({
+      where: {
+        caseId,
+      },
+    });
+
+    if (!existingCase) {
+      return res.status(404).json({
+        error: "Case not found",
+      });
+    }
+
     const updatedCase = await prisma.case.update({
       where: {
         caseId,
