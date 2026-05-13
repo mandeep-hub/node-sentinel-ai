@@ -4,8 +4,9 @@ let lastProcessedTransactionId: string | null = null;
 
 export async function checkNewTransactions() {
   try {
-    const baseUrl =
-      process.env.TRANSACTION_ENGINE_URL || "http://localhost:5100";
+    /* const baseUrl =
+      process.env.TRANSACTION_ENGINE_URL || "http://localhost:5100"; */
+    const baseUrl = "http://localhost:5100";
 
     let url = `${baseUrl}/transactions`;
 
@@ -22,8 +23,6 @@ export async function checkNewTransactions() {
     const transactions = await response.json();
 
     if (!transactions.length) {
-      console.log("No new transactions found");
-
       return;
     }
 

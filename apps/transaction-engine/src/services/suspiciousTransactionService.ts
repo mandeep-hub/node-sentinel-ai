@@ -13,8 +13,6 @@ export async function flagSuspiciousTransaction(transaction: any) {
     });
 
     if (existingCase) {
-      console.log(`Case already exists for transaction ${transaction.id}`);
-
       return;
     }
 
