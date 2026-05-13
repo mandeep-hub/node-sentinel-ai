@@ -23,7 +23,9 @@ export default function TransactionsPage() {
 
   const fetchTransactions = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:5000/transactions");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_TRANSACTION_ENGINE_URL}/transactions`,
+      );
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
       const data = await res.json();
       setTransactions(data);
