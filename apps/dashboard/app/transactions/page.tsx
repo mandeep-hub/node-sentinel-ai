@@ -30,7 +30,9 @@ export default function TransactionsPage() {
       setError(null);
       setLastUpdated(new Date());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch transactions");
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch transactions",
+      );
     } finally {
       setLoading(false);
     }
@@ -52,14 +54,21 @@ export default function TransactionsPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Transactions</h1>
+            <h1 className="text-2xl font-semibold text-foreground">
+              Transactions
+            </h1>
             {lastUpdated && (
               <p className="mt-1 text-xs text-muted-foreground">
                 Last updated {lastUpdated.toLocaleTimeString()}
               </p>
             )}
           </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={loading}
+          >
             {loading ? "Refreshing…" : "Refresh"}
           </Button>
         </div>
@@ -72,26 +81,48 @@ export default function TransactionsPage() {
 
         {loading && transactions.length === 0 ? (
           <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
-            <p className="text-sm text-muted-foreground">Loading transactions…</p>
+            <p className="text-sm text-muted-foreground">
+              Loading transactions…
+            </p>
           </div>
         ) : transactions.length === 0 && !error ? (
           <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
-            <p className="text-sm text-muted-foreground">No transactions found.</p>
+            <p className="text-sm text-muted-foreground">
+              No transactions found.
+            </p>
           </div>
         ) : (
           <div className="overflow-hidden rounded-lg border border-border bg-card">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">ID</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">User ID</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Crypto</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Fiat Amount</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Crypto Amount</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Currency</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Country</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    ID
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    User ID
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Type
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Crypto
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    Fiat Amount
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    Crypto Amount
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Currency
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Country
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Date
+                  </th>
                 </tr>
               </thead>
               <tbody>
