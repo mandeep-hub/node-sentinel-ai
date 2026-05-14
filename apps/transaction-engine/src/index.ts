@@ -6,6 +6,9 @@ import { generateTransaction } from "./services/transactionGenerator";
 import { updateCryptoPrices } from "./services/fxService";
 import { transactionStore } from "./services/transactionStore";
 import { convertCurrency } from "./services/exchangeRateService";
+import { flagSuspiciousTransaction } from "./services/suspiciousTransactionService";
+import { checkNewTransactions } from "./services/suspiciousTransactionChecker";
+import { prisma } from "./services/prisma";
 
 const app = express();
 
@@ -26,15 +29,25 @@ setInterval(async () => {
 
     const transaction = await generateTransaction();
 
-    await transactionStore.create({
+    const createdTransaction = await transactionStore.create({
       data: transaction,
     });
 
-    console.log("Auto-generated transaction:", transaction.id);
+    await flagSuspiciousTransaction(createdTransaction);
+
+    console.log("Auto-generated transaction:", createdTransaction.id);
   } catch (error) {
     console.error("Failed to auto-generate transaction:", error);
   }
 }, 40000);
+
+setInterval(async () => {
+  try {
+    await checkNewTransactions();
+  } catch (error) {
+    console.error("Failed to check new transactions:", error);
+  }
+}, 10000);
 
 app.get("/", (req, res) => {
   res.send("Node Sentinel AI Transaction Engine 🚀");
@@ -46,11 +59,13 @@ app.post("/transactions/generate", async (req, res) => {
 
     const transaction = await generateTransaction();
 
-    await transactionStore.create({
+    const createdTransaction = await transactionStore.create({
       data: transaction,
     });
 
-    res.json(transaction);
+    await flagSuspiciousTransaction(createdTransaction);
+
+    res.json(createdTransaction);
   } catch (error) {
     console.error("Generate transaction error:", error);
 
@@ -69,11 +84,13 @@ app.post("/transactions/generate-many", async (req, res) => {
     for (let i = 0; i < 20; i++) {
       const transaction = await generateTransaction();
 
-      await transactionStore.create({
+      const createdTransaction = await transactionStore.create({
         data: transaction,
       });
 
-      generatedTransactions.push(transaction);
+      await flagSuspiciousTransaction(createdTransaction);
+
+      generatedTransactions.push(createdTransaction);
     }
 
     res.json(generatedTransactions);
@@ -161,6 +178,50 @@ app.get("/convert", async (req, res) => {
 
     res.status(400).json({
       error: error instanceof Error ? error.message : "Conversion failed",
+    });
+  }
+});
+
+app.patch("/cases/:caseId/status", async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ["OPEN", "PROCESSING", "CLOSED"];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        error: "Invalid status. Allowed values are OPEN, PROCESSING, CLOSED",
+      });
+    }
+
+    const existingCase = await prisma.case.findUnique({
+      where: {
+        caseId,
+      },
+    });
+
+    if (!existingCase) {
+      return res.status(404).json({
+        error: "Case not found",
+      });
+    }
+
+    const updatedCase = await prisma.case.update({
+      where: {
+        caseId,
+      },
+      data: {
+        status,
+      },
+    });
+
+    res.json(updatedCase);
+  } catch (error) {
+    console.error("Failed to update case status:", error);
+
+    res.status(500).json({
+      error: "Failed to update case status",
     });
   }
 });
