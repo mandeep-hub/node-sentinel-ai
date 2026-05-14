@@ -23,3 +23,17 @@ model Transaction {
   country         String
   createdAt       DateTime @default(now())
 }
+
+model Case {
+id              String   @id @default(uuid())
+caseId          String   @unique
+userId          String
+transactionId   String   @unique
+amount          Float
+currency        String
+transactionType String
+status          String   @default("OPEN")
+reason          String?
+createdAt       DateTime @default(now())
+updatedAt       DateTime @updatedAt
+}

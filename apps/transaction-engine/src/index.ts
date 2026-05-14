@@ -5,6 +5,7 @@ import cors from "cors";
 import { generateTransaction } from "./services/transactionGenerator";
 import { updateCryptoPrices } from "./services/fxService";
 import { transactionStore } from "./services/transactionStore";
+import { prisma } from "./services/prisma";
 
 const app = express();
 
@@ -117,6 +118,27 @@ app.get("/transactions", async (req, res) => {
   }
 });
 
+app.get("/cases", async (req, res) => {
+  try {
+    const cases = await prisma.case.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (cases.length === 0) {
+      console.log("No cases found.");
+    }
+
+    return res.status(200).json(cases);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: "Failed to retrieve cases",
+    });
+  }
+});
 const PORT = 5000;
 
 app.listen(PORT, () => {
