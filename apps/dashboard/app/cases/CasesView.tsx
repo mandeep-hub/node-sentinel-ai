@@ -8,8 +8,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useRouter } from "next/navigation";
 
 export default function CasesView({ cases }: { cases: any[] }) {
+  const router = useRouter();
   return (
     <div className="w-full space-y-4">
       <h1 className="text-2xl font-semibold">Cases</h1>
@@ -35,7 +37,11 @@ export default function CasesView({ cases }: { cases: any[] }) {
 
             <TableBody>
               {cases.map((caseItem) => (
-                <TableRow key={caseItem.id}>
+                <TableRow
+                  key={caseItem.id}
+                  className="cursor-pointer hover:bg-muted"
+                  onClick={() => router.push(`/cases/${caseItem.caseId}`)}
+                >
                   <TableCell>{caseItem.caseId}</TableCell>
                   <TableCell>{caseItem.userId}</TableCell>
                   <TableCell>{caseItem.transactionId}</TableCell>
