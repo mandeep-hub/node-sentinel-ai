@@ -14,14 +14,14 @@ datasource db {
 
 model Transaction {
   id              String   @id @default(uuid())
-  userId          Int
-  transactionType String
-  cryptoType      String
-  fiatAmount      Int
-  cryptoAmount    Float
-  currency        String
-  country         String
-  createdAt       DateTime @default(now())
+userId          Int
+transactionType String
+cryptoType      String
+fiatAmount      Float
+cryptoAmount    Float
+currency        String
+country         String
+createdAt       DateTime @default(now())
 }
 
 model Case {
