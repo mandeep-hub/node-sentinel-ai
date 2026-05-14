@@ -22,4 +22,8 @@ cryptoAmount    Float
 currency        String
 country         String
 createdAt       DateTime @default(now())
+conversionFrom            String?
+  conversionTo              String?
+  conversionOriginalAmount  Float?
+  conversionConvertedAmount Float?
 }

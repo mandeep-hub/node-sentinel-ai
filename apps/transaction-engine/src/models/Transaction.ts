@@ -8,4 +8,8 @@ export interface Transaction {
   currency: string;
   country: string;
   createdAt: Date;
+  conversionFrom?: string;
+  conversionTo?: string;
+  conversionOriginalAmount?: number;
+  conversionConvertedAmount?: number;
 }

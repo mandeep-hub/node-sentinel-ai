@@ -13,6 +13,10 @@ interface Transaction {
   currency: string;
   country: string;
   createdAt: string;
+  conversionFrom?: string;
+  conversionTo?: string;
+  conversionOriginalAmount?: number;
+  conversionConvertedAmount?: number;
 }
 
 export default function TransactionsPage() {
@@ -118,6 +122,18 @@ export default function TransactionsPage() {
                     Currency
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Conv. From
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Conv. To
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    Original
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                    Converted
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                     Country
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -136,33 +152,73 @@ export default function TransactionsPage() {
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                       {tx.id.length > 12 ? `${tx.id.slice(0, 12)}…` : tx.id}
                     </td>
+
                     <td className="px-4 py-3 text-foreground">{tx.userId}</td>
+
                     <td className="px-4 py-3">
                       <TypeBadge type={tx.transactionType} />
                     </td>
+
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 font-mono text-xs font-medium text-muted-foreground">
                         {tx.cryptoType}
                       </span>
                     </td>
+
                     <td className="px-4 py-3 text-right font-mono text-foreground">
                       {Number(tx.fiatAmount).toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
                     </td>
+
                     <td className="px-4 py-3 text-right font-mono text-foreground">
                       {Number(tx.cryptoAmount).toLocaleString(undefined, {
                         minimumFractionDigits: 4,
                         maximumFractionDigits: 4,
                       })}
                     </td>
+
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground uppercase">
                       {tx.currency}
                     </td>
+
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground uppercase">
+                      {tx.conversionFrom ?? "—"}
+                    </td>
+
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground uppercase">
+                      {tx.conversionTo ?? "—"}
+                    </td>
+
+                    <td className="px-4 py-3 text-right font-mono text-foreground">
+                      {tx.conversionOriginalAmount != null
+                        ? Number(tx.conversionOriginalAmount).toLocaleString(
+                            undefined,
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )
+                        : "—"}
+                    </td>
+
+                    <td className="px-4 py-3 text-right font-mono text-foreground">
+                      {tx.conversionConvertedAmount != null
+                        ? Number(tx.conversionConvertedAmount).toLocaleString(
+                            undefined,
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )
+                        : "—"}
+                    </td>
+
                     <td className="px-4 py-3 text-xs text-muted-foreground uppercase">
                       {tx.country}
                     </td>
+
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {new Date(tx.createdAt).toLocaleString()}
                     </td>
