@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { motion } from "motion/react";
 
 interface Transaction {
   id: string;
@@ -129,11 +130,16 @@ export default function TransactionsPage() {
               </thead>
               <tbody>
                 {transactions.map((tx, i) => (
-                  <tr
+                  <motion.tr
                     key={tx.id}
                     className={`border-b border-border last:border-0 ${
                       i % 2 === 0 ? "bg-card" : "bg-muted/10"
                     } transition-colors hover:bg-muted/20`}
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeOut" }}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                       {tx.id.length > 12 ? `${tx.id.slice(0, 12)}…` : tx.id}
@@ -168,7 +174,7 @@ export default function TransactionsPage() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {new Date(tx.createdAt).toLocaleString()}
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
