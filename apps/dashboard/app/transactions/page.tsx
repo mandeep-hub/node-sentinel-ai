@@ -42,7 +42,7 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     fetchTransactions();
-    const interval = setInterval(fetchTransactions, 40_000);
+    const interval = setInterval(fetchTransactions, 4000);
     return () => clearInterval(interval);
   }, [fetchTransactions]);
 

@@ -2,7 +2,10 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 
-import { generateTransaction } from "./services/transactionGenerator";
+import {
+  generateTransaction,
+  generateTransactions,
+} from "./services/transactionGenerator";
 import { updateCryptoPrices } from "./services/fxService";
 import { transactionStore } from "./services/transactionStore";
 import { convertCurrency } from "./services/exchangeRateService";
@@ -23,31 +26,30 @@ if (!process.env.CURRENCY_FREAKS_API_KEY) {
   console.log("CURRENCY_FREAKS_API_KEY is missing in .env");
 }
 
-setInterval(async () => {
-  try {
-    await updateCryptoPrices();
+async function createRandomTransactions() {
+  const transactions = generateTransactions(Math.ceil(Math.random() * 5));
 
-    const transaction = await generateTransaction();
+  const createdTransaction = await transactionStore.createMany({
+    data: transactions,
+  });
 
-    const createdTransaction = await transactionStore.create({
-      data: transaction,
-    });
+  console.log(`Created ${createdTransaction.count} transactions`);
+}
 
-    await flagSuspiciousTransaction(createdTransaction);
+async function init() {
+  await updateCryptoPrices();
+  setInterval(updateCryptoPrices, 40000);
+  setInterval(createRandomTransactions, 4000);
 
-    console.log("Auto-generated transaction:", createdTransaction.id);
-  } catch (error) {
-    console.error("Failed to auto-generate transaction:", error);
-  }
-}, 40000);
-
-setInterval(async () => {
-  try {
-    await checkNewTransactions();
-  } catch (error) {
-    console.error("Failed to check new transactions:", error);
-  }
-}, 10000);
+  // setInterval(async () => {
+  //   try {
+  //     await checkNewTransactions();
+  //   } catch (error) {
+  //     console.error("Failed to check new transactions:", error);
+  //   }
+  // }, 10000);
+}
+init();
 
 app.get("/", (req, res) => {
   res.send("Node Sentinel AI Transaction Engine 🚀");
@@ -109,8 +111,9 @@ app.get("/transactions", async (req, res) => {
 
     const allTransactions = await transactionStore.findMany({
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
+      take: 20,
     });
 
     if (!fromId) {
