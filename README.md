@@ -1,6 +1,6 @@
 # Node Sentinel AI
 
-Node Sentinel AI is a compliance monitoring platform for digital asset platforms. It monitors crypto transactions in real time, automatically flags suspicious activity, and helps compliance analysts review and manage cases through an admin dashboard.
+Node Sentinel AI is a compliance monitoring platform for digital asset platforms. It monitors transactions in real time, automatically flags suspicious activity, and helps compliance analysts review and manage cases through an admin dashboard.
 
 ## Features
 
