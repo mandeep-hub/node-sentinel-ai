@@ -9,3 +9,5 @@ export interface Transaction {
   country: string;
   createdAt: Date;
 }
+
+export type UnsavedTransaction = Omit<Transaction, "id">;
