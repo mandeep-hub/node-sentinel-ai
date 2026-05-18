@@ -1,12 +1,15 @@
-import { prisma } from "./prisma";
-
-export async function flagSuspiciousTransaction(transaction: any) {
+export async function flagSuspiciousTransaction(transaction: any, tx: any) {
   try {
-    if (transaction.fiatAmount <= 30000) {
+    const debitAmount = Number(transaction.debitAmount || 0);
+
+    const isSuspicious =
+      transaction.debitCurrencyCode === "USD" && debitAmount >= 30000;
+
+    if (!isSuspicious) {
       return;
     }
 
-    const existingCase = await prisma.case.findUnique({
+    const existingCase = await tx.case.findUnique({
       where: {
         transactionId: transaction.id,
       },
@@ -15,17 +18,37 @@ export async function flagSuspiciousTransaction(transaction: any) {
     if (existingCase) {
       return;
     }
+    await tx.transaction.update({
+      where: {
+        id: transaction.id,
+      },
 
-    const createdCase = await prisma.case.create({
+      data: {
+        status: "flagged",
+
+        flaggedAt: new Date(),
+
+        flagReason: "Transaction amount exceeded 30k threshold",
+      },
+    });
+
+    const createdCase = await tx.case.create({
       data: {
         caseId: `CASE-${Date.now()}`,
-        userId: String(transaction.userId),
+
+        userId: transaction.userId,
+
         transactionId: transaction.id,
-        amount: transaction.fiatAmount,
-        currency: transaction.currency,
-        transactionType: transaction.transactionType,
+
+        amount: debitAmount,
+
+        currency: transaction.debitCurrencyCode,
+
+        transactionType: transaction.kind,
+
         status: "OPEN",
-        reason: "Transaction amount exceeded 30k threshold",
+
+        reason: "Large USD debit transaction exceeded 30k threshold",
       },
     });
 

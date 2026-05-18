@@ -12,28 +12,96 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Currency {
+  code     String @id
+  kind     String
+  decimals Int
+
+  debitTransactions  Transaction[] @relation("DebitCurrency")
+  creditTransactions Transaction[] @relation("CreditCurrency")
+
+  balances Balance[]
+}
+
+model User {
+  id    String @id @default(uuid())
+  name  String
+  email String @unique
+
+  balances     Balance[]
+  transactions Transaction[]
+  cases        Case[]
+}
+
+model Balance {
+  userId       String
+  currencyCode String
+
+  amount Decimal @db.Decimal(38, 18)
+
+  user User @relation(fields: [userId], references: [id])
+
+  currency Currency @relation(fields: [currencyCode], references: [code])
+
+  @@id([userId, currencyCode])
+}
+
 model Transaction {
-id              String   @id @default(uuid())
-userId          Int
-transactionType String
-cryptoType      String
-fiatAmount      Float
-cryptoAmount    Float
-currency        String
-country         String
-createdAt       DateTime @default(now())
+  id String @id @default(uuid())
+
+  userId String
+
+  kind String
+
+  creditCurrencyCode String?
+
+  creditAmount Decimal? @db.Decimal(38, 18)
+
+  debitCurrencyCode String?
+
+  debitAmount Decimal? @db.Decimal(38, 18)
+
+  status String
+
+  flaggedAt DateTime?
+
+  flagReason String?
+
+  createdAt DateTime @default(now())
+
+  metadata Json?
+
+  user User @relation(fields: [userId], references: [id])
+
+  creditCurrency Currency? @relation("CreditCurrency", fields: [creditCurrencyCode], references: [code])
+
+  debitCurrency Currency? @relation("DebitCurrency", fields: [debitCurrencyCode], references: [code])
+
+  case Case?
 }
 
 model Case {
-id              String   @id @default(uuid())
-caseId          String   @unique
-userId          String
-transactionId   String   @unique
-amount          Float
-currency        String
-transactionType String
-status          String   @default("OPEN")
-reason          String?
-createdAt       DateTime @default(now())
-updatedAt       DateTime @updatedAt
+  id String @id @default(uuid())
+
+  caseId String @unique
+
+  userId String
+
+  transactionId String @unique
+
+  amount Decimal @db.Decimal(38, 18)
+
+  currency String
+
+  transactionType String
+
+  status String
+
+  reason String
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
 }

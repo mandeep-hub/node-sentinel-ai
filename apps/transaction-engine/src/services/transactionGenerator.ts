@@ -1,34 +1,220 @@
-import { UnsavedTransaction } from "../models/Transaction";
+import { prisma } from "./prisma";
+
 import { getCryptoPrice, PriceCache } from "./fxService";
 
+const fiatCurrencies = ["USD", "EUR", "GBP"];
+
+const cryptoCurrencies = ["BTC", "ETH", "SOL"] as const;
+
 const countries = ["US", "UK", "DE", "IR"];
-const currencies = ["USD", "EUR", "GBP"];
-const cryptoTypes = ["BTC", "ETH", "SOL"] as const;
 
-export function generateTransaction(): UnsavedTransaction {
-  const fiatAmount = Math.floor(Math.random() * 50000);
+const transactionKinds = ["deposit", "withdrawal", "trade"] as const;
 
-  const transactionType = Math.random() > 0.5 ? "BUY" : "SELL";
+const statuses = ["settled", "pending", "flagged", "reversed"] as const;
 
-  const cryptoType: keyof PriceCache =
-    cryptoTypes[Math.floor(Math.random() * cryptoTypes.length)];
+export interface UnsavedTransaction {
+  userId: string;
 
-  const cryptoPrice = getCryptoPrice(cryptoType);
+  kind: "deposit" | "withdrawal" | "trade";
 
-  const cryptoAmount = Number((fiatAmount / cryptoPrice).toFixed(4));
+  creditCurrencyCode?: string;
+
+  creditAmount?: number;
+
+  debitCurrencyCode?: string;
+
+  debitAmount?: number;
+
+  status: "settled" | "pending" | "flagged" | "reversed";
+
+  metadata?: {
+    country: string;
+
+    exchangeRate?: number;
+  };
+
+  createdAt: Date;
+}
+
+function randomItem<T>(array: readonly T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+export async function generateTransaction(): Promise<UnsavedTransaction> {
+  const kind = randomItem(transactionKinds);
+
+  const country = randomItem(countries);
+
+  const status = randomItem(statuses);
+
+  const demoUserIds = ["user-1", "user-2", "user-3"];
+
+  const userId = demoUserIds[Math.floor(Math.random() * demoUserIds.length)];
+
+  const balances = await prisma.balance.findMany({
+    where: {
+      userId,
+    },
+  });
+
+  const spendableBalances = balances.filter(
+    (balance) => Number(balance.amount) > 10,
+  );
+
+  if (spendableBalances.length === 0) {
+    const fiatCurrency = randomItem(fiatCurrencies);
+
+    const fiatAmount = Math.floor(Math.random() * 5000) + 1000;
+
+    return {
+      userId,
+
+      kind: "deposit",
+
+      creditCurrencyCode: fiatCurrency,
+
+      creditAmount: fiatAmount,
+
+      status,
+
+      metadata: {
+        country,
+      },
+
+      createdAt: new Date(),
+    };
+  }
+
+  const selectedBalance = randomItem(spendableBalances);
+
+  const currencyCode = selectedBalance.currencyCode;
+
+  const currentBalance = Number(selectedBalance.amount);
+
+  const maxSpendable = currentBalance * 0.2;
+
+  const spendAmount = Number((Math.random() * maxSpendable + 1).toFixed(2));
+
+  if (kind === "trade" && fiatCurrencies.includes(currencyCode)) {
+    const cryptoCurrency: keyof PriceCache = randomItem(cryptoCurrencies);
+
+    const cryptoPrice = getCryptoPrice(cryptoCurrency);
+
+    const cryptoAmount = Number((spendAmount / cryptoPrice).toFixed(6));
+
+    return {
+      userId,
+
+      kind,
+
+      debitCurrencyCode: currencyCode,
+
+      debitAmount: spendAmount,
+
+      creditCurrencyCode: cryptoCurrency,
+
+      creditAmount: cryptoAmount,
+
+      status,
+
+      metadata: {
+        country,
+
+        exchangeRate: cryptoPrice,
+      },
+
+      createdAt: new Date(),
+    };
+  }
+
+  if (
+    kind === "trade" &&
+    cryptoCurrencies.includes(currencyCode as keyof PriceCache)
+  ) {
+    const cryptoPrice = getCryptoPrice(currencyCode as keyof PriceCache);
+
+    const fiatCurrency = randomItem(fiatCurrencies);
+
+    const fiatAmount = Number((spendAmount * cryptoPrice).toFixed(2));
+
+    return {
+      userId,
+
+      kind,
+
+      debitCurrencyCode: currencyCode,
+
+      debitAmount: spendAmount,
+
+      creditCurrencyCode: fiatCurrency,
+
+      creditAmount: fiatAmount,
+
+      status,
+
+      metadata: {
+        country,
+
+        exchangeRate: cryptoPrice,
+      },
+
+      createdAt: new Date(),
+    };
+  }
+
+  if (kind === "withdrawal") {
+    return {
+      userId,
+
+      kind,
+
+      debitCurrencyCode: currencyCode,
+
+      debitAmount: spendAmount,
+
+      status,
+
+      metadata: {
+        country,
+      },
+
+      createdAt: new Date(),
+    };
+  }
+
+  const fiatCurrency = randomItem(fiatCurrencies);
+
+  const fiatAmount = Math.floor(Math.random() * 5000) + 1000;
 
   return {
-    userId: Math.floor(Math.random() * 10) + 1,
-    transactionType,
-    cryptoType,
-    fiatAmount,
-    cryptoAmount,
-    currency: currencies[Math.floor(Math.random() * currencies.length)],
-    country: countries[Math.floor(Math.random() * countries.length)],
+    userId,
+
+    kind: "deposit",
+
+    creditCurrencyCode: fiatCurrency,
+
+    creditAmount: fiatAmount,
+
+    status,
+
+    metadata: {
+      country,
+    },
+
     createdAt: new Date(),
   };
 }
 
-export function generateTransactions(num = 5): UnsavedTransaction[] {
-  return new Array(num).fill(0).map(generateTransaction);
+export async function generateTransactions(
+  num = 5,
+): Promise<UnsavedTransaction[]> {
+  const transactions: UnsavedTransaction[] = [];
+
+  for (let i = 0; i < num; i++) {
+    const transaction = await generateTransaction();
+
+    transactions.push(transaction);
+  }
+
+  return transactions;
 }

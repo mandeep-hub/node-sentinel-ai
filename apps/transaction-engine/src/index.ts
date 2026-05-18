@@ -6,16 +6,28 @@ import {
   generateTransaction,
   generateTransactions,
 } from "./services/transactionGenerator";
+
 import { updateCryptoPrices } from "./services/fxService";
+
 import { transactionStore } from "./services/transactionStore";
+
 import { convertCurrency } from "./services/exchangeRateService";
+
 import { flagSuspiciousTransaction } from "./services/suspiciousTransactionService";
-import { checkNewTransactions } from "./services/suspiciousTransactionChecker";
+
 import { prisma } from "./services/prisma";
+
+import { seedUsers } from "./services/seedUsers";
+
+import { seedCurrencies } from "./services/seedCurrencies";
+
+import { updateBalances } from "./services/balanceService";
+import { seedBalances } from "./services/seedBalances";
 
 const app = express();
 
 app.use(cors());
+
 app.use(express.json());
 
 if (!process.env.COINGECKO_API_KEY) {
@@ -27,28 +39,42 @@ if (!process.env.CURRENCY_FREAKS_API_KEY) {
 }
 
 async function createRandomTransactions() {
-  const transactions = generateTransactions(Math.ceil(Math.random() * 5));
+  try {
+    const transactions = await generateTransactions(
+      Math.ceil(Math.random() * 5),
+    );
 
-  const createdTransaction = await transactionStore.createMany({
-    data: transactions,
-  });
+    for (const transaction of transactions) {
+      await prisma.$transaction(async (tx) => {
+        const createdTransaction = await tx.transaction.create({
+          data: transaction,
+        });
 
-  console.log(`Created ${createdTransaction.count} transactions`);
+        await updateBalances(createdTransaction, tx);
+
+        await flagSuspiciousTransaction(createdTransaction, tx);
+      });
+    }
+
+    console.log(`Created ${transactions.length} transactions`);
+  } catch (error) {
+    console.error("Failed to create random transactions:", error);
+  }
 }
 
 async function init() {
-  await updateCryptoPrices();
-  setInterval(updateCryptoPrices, 40000);
-  setInterval(createRandomTransactions, 4000);
+  await seedUsers();
 
-  // setInterval(async () => {
-  //   try {
-  //     await checkNewTransactions();
-  //   } catch (error) {
-  //     console.error("Failed to check new transactions:", error);
-  //   }
-  // }, 10000);
+  await seedCurrencies();
+  await seedBalances();
+
+  await updateCryptoPrices();
+
+  setInterval(updateCryptoPrices, 40000);
+
+  setInterval(createRandomTransactions, 4000);
 }
+
 init();
 
 app.get("/", (req, res) => {
@@ -61,11 +87,17 @@ app.post("/transactions/generate", async (req, res) => {
 
     const transaction = await generateTransaction();
 
-    const createdTransaction = await transactionStore.create({
-      data: transaction,
-    });
+    let createdTransaction: any;
 
-    await flagSuspiciousTransaction(createdTransaction);
+    await prisma.$transaction(async (tx) => {
+      createdTransaction = await tx.transaction.create({
+        data: transaction,
+      });
+
+      await updateBalances(createdTransaction, tx);
+
+      await flagSuspiciousTransaction(createdTransaction, tx);
+    });
 
     res.json(createdTransaction);
   } catch (error) {
@@ -81,18 +113,22 @@ app.post("/transactions/generate-many", async (req, res) => {
   try {
     await updateCryptoPrices();
 
-    const generatedTransactions = [];
+    const generatedTransactions: any[] = [];
 
     for (let i = 0; i < 20; i++) {
       const transaction = await generateTransaction();
 
-      const createdTransaction = await transactionStore.create({
-        data: transaction,
+      await prisma.$transaction(async (tx) => {
+        const createdTransaction = await tx.transaction.create({
+          data: transaction,
+        });
+
+        await updateBalances(createdTransaction, tx);
+
+        await flagSuspiciousTransaction(createdTransaction, tx);
+
+        generatedTransactions.push(createdTransaction);
       });
-
-      await flagSuspiciousTransaction(createdTransaction);
-
-      generatedTransactions.push(createdTransaction);
     }
 
     res.json(generatedTransactions);
@@ -110,9 +146,16 @@ app.get("/transactions", async (req, res) => {
     const fromId = req.query.fromId as string;
 
     const allTransactions = await transactionStore.findMany({
+      include: {
+        user: true,
+        debitCurrency: true,
+        creditCurrency: true,
+      },
+
       orderBy: {
         createdAt: "desc",
       },
+
       take: 20,
     });
 
@@ -142,10 +185,50 @@ app.get("/transactions", async (req, res) => {
   }
 });
 
+app.get("/cases", async (req, res) => {
+  try {
+    const cases = await prisma.case.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    res.json(cases);
+  } catch (error) {
+    console.error("Failed to retrieve cases:", error);
+
+    res.status(500).json({
+      error: "Failed to retrieve cases",
+    });
+  }
+});
+
+app.get("/cases/open/count", async (req, res) => {
+  try {
+    const openAlerts = await prisma.case.count({
+      where: {
+        status: "OPEN",
+      },
+    });
+
+    res.json({
+      openAlerts,
+    });
+  } catch (error) {
+    console.error("Failed to retrieve open alerts:", error);
+
+    res.status(500).json({
+      error: "Failed to retrieve open alerts",
+    });
+  }
+});
+
 app.get("/convert", async (req, res) => {
   try {
     const amount = Number(req.query.amount);
+
     const from = req.query.from as string;
+
     const to = req.query.to as string;
 
     if (!amount || amount <= 0) {
@@ -188,6 +271,7 @@ app.get("/convert", async (req, res) => {
 app.patch("/cases/:caseId/status", async (req, res) => {
   try {
     const { caseId } = req.params;
+
     const { status } = req.body;
 
     const allowedStatuses = ["OPEN", "PROCESSING", "CLOSED"];
@@ -214,6 +298,7 @@ app.patch("/cases/:caseId/status", async (req, res) => {
       where: {
         caseId,
       },
+
       data: {
         status,
       },

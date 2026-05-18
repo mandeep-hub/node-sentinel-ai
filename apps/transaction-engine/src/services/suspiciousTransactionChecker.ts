@@ -1,11 +1,11 @@
 import { flagSuspiciousTransaction } from "./suspiciousTransactionService";
 
+import { prisma } from "./prisma";
+
 let lastProcessedTransactionId: string | null = null;
 
 export async function checkNewTransactions() {
   try {
-    /* const baseUrl =
-      process.env.TRANSACTION_ENGINE_URL || "http://localhost:5100"; */
     const baseUrl = "http://localhost:5100";
 
     let url = `${baseUrl}/transactions`;
@@ -27,7 +27,7 @@ export async function checkNewTransactions() {
     }
 
     for (const transaction of transactions) {
-      await flagSuspiciousTransaction(transaction);
+      await flagSuspiciousTransaction(transaction, prisma);
 
       lastProcessedTransactionId = transaction.id;
     }
