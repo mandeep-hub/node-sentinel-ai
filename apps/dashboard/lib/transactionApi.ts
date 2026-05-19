@@ -1,5 +1,7 @@
 export async function fetchTransactions() {
-  const response = await fetch("http://localhost:5100/transactions");
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_TRANSACTION_ENGINE_URL}/transactions`,
+  );
 
   if (!response.ok) {
     throw new Error("Failed to fetch transactions");

@@ -17,8 +17,7 @@ export async function createCaseForSuspiciousTransaction(
 ) {
   const debitAmount = Number(transaction.debitAmount || 0);
 
-  const isSuspicious =
-    transaction.debitCurrencyCode === "USD" && debitAmount >= 30000;
+  const isSuspicious = debitAmount >= 30000;
 
   if (!isSuspicious) {
     return null;
