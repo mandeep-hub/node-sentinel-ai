@@ -1,19 +1,36 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import { motion } from "motion/react";
+
+interface CurrencyRef {
+  code: string;
+  kind: string;
+  decimals: number;
+}
+
+interface UserRef {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface Transaction {
   id: string;
-  userId: number;
-  transactionType: "BUY" | "SELL";
-  cryptoType: "BTC" | "ETH" | "SOL";
-  fiatAmount: number;
-  cryptoAmount: number;
-  currency: string;
-  country: string;
+  userId: string;
+  kind: string;
+  creditCurrencyCode: string | null;
+  creditAmount: string | null;
+  debitCurrencyCode: string | null;
+  debitAmount: string | null;
+  status: string;
+  flaggedAt: string | null;
+  flagReason: string | null;
   createdAt: string;
+  metadata: unknown;
+  user: UserRef;
+  creditCurrency: CurrencyRef | null;
+  debitCurrency: CurrencyRef | null;
 }
 
 export default function TransactionsPage() {
@@ -47,11 +64,6 @@ export default function TransactionsPage() {
     return () => clearInterval(interval);
   }, [fetchTransactions]);
 
-  const handleRefresh = () => {
-    setLoading(true);
-    fetchTransactions();
-  };
-
   return (
     <div className="min-h-screen bg-background px-6 py-8">
       <div className="mx-auto max-w-7xl">
@@ -66,14 +78,6 @@ export default function TransactionsPage() {
               </p>
             )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={loading}
-          >
-            {loading ? "Refreshing…" : "Refresh"}
-          </Button>
         </div>
 
         {error && (
@@ -103,25 +107,19 @@ export default function TransactionsPage() {
                     ID
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    User ID
+                    User
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Type
+                    Kind
+                  </th>
+                  <th className="w-36 min-w-36 max-w-36 px-4 py-3 text-right font-medium text-muted-foreground">
+                    Debit
+                  </th>
+                  <th className="w-36 min-w-36 max-w-36 px-4 py-3 text-right font-medium text-muted-foreground">
+                    Credit
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Crypto
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Fiat Amount
-                  </th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                    Crypto Amount
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Currency
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Country
+                    Status
                   </th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                     Date
@@ -129,53 +127,55 @@ export default function TransactionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((tx, i) => (
-                  <motion.tr
-                    key={tx.id}
-                    className={`border-b border-border last:border-0 ${
-                      i % 2 === 0 ? "bg-card" : "bg-muted/10"
-                    } transition-colors hover:bg-muted/20`}
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.25, ease: "easeOut" }}
-                  >
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                      {tx.id.length > 12 ? `${tx.id.slice(0, 12)}…` : tx.id}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">{tx.userId}</td>
-                    <td className="px-4 py-3">
-                      <TypeBadge type={tx.transactionType} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 font-mono text-xs font-medium text-muted-foreground">
-                        {tx.cryptoType}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-foreground">
-                      {Number(tx.fiatAmount).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-foreground">
-                      {Number(tx.cryptoAmount).toLocaleString(undefined, {
-                        minimumFractionDigits: 4,
-                        maximumFractionDigits: 4,
-                      })}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground uppercase">
-                      {tx.currency}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground uppercase">
-                      {tx.country}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {new Date(tx.createdAt).toLocaleString()}
-                    </td>
-                  </motion.tr>
-                ))}
+                {transactions.map((tx, i) => {
+                  const flagged = tx.flagReason !== null;
+                  const zebra = i % 2 === 0 ? "bg-card" : "bg-muted/10";
+                  const rowClass = flagged
+                    ? "border-l-2 border-l-destructive bg-destructive/5"
+                    : zebra;
+                  return (
+                    <motion.tr
+                      key={tx.id}
+                      className={`border-b border-border last:border-0 ${rowClass} transition-colors hover:bg-muted/20`}
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
+                    >
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                        {tx.id.length > 12 ? `${tx.id.slice(0, 12)}…` : tx.id}
+                      </td>
+                      <td className="px-4 py-3 text-foreground">
+                        {tx.user.name}
+                      </td>
+                      <td className="px-4 py-3">
+                        <KindBadge tx={tx} />
+                      </td>
+                      <td className="w-36 min-w-36 max-w-36 whitespace-nowrap px-4 py-3 text-right font-mono text-foreground">
+                        <AmountCell
+                          amount={tx.debitAmount}
+                          currency={tx.debitCurrency}
+                        />
+                      </td>
+                      <td className="w-36 min-w-36 max-w-36 whitespace-nowrap px-4 py-3 text-right font-mono text-foreground">
+                        <AmountCell
+                          amount={tx.creditAmount}
+                          currency={tx.creditCurrency}
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge
+                          status={tx.status}
+                          flagReason={tx.flagReason}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {new Date(tx.createdAt).toLocaleString()}
+                      </td>
+                    </motion.tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -185,26 +185,112 @@ export default function TransactionsPage() {
   );
 }
 
-function TypeBadge({ type }: { type: "BUY" | "SELL" | string }) {
-  if (type === "BUY") {
+function AmountCell({
+  amount,
+  currency,
+}: {
+  amount: string | null;
+  currency: CurrencyRef | null;
+}) {
+  if (amount === null || currency === null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const value = parseFloat(amount);
+  const formatted = value.toLocaleString(undefined, {
+    minimumFractionDigits: Math.min(currency.decimals, 8),
+    maximumFractionDigits: Math.min(currency.decimals, 8),
+  });
+  return (
+    <span>
+      {formatted}{" "}
+      <span className="text-xs text-muted-foreground">{currency.code}</span>
+    </span>
+  );
+}
+
+function KindBadge({ tx }: { tx: Transaction }) {
+  const credit = tx.creditCurrency;
+  const debit = tx.debitCurrency;
+
+  if (credit?.kind === "crypto" && debit?.kind === "fiat") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
-        <span className="size-1.5 rounded-full bg-green-400" />
-        BUY
-      </span>
+      <Badge tone="green">
+        Bought {tx.creditCurrencyCode}
+      </Badge>
     );
   }
-  if (type === "SELL") {
+  if (credit?.kind === "fiat" && debit?.kind === "crypto") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-        <span className="size-1.5 rounded-full bg-primary" />
-        SELL
-      </span>
+      <Badge tone="primary">
+        Sold {tx.debitCurrencyCode}
+      </Badge>
     );
+  }
+  if (tx.kind === "deposit") {
+    return <Badge tone="blue">Deposit</Badge>;
+  }
+  if (tx.kind === "withdrawal") {
+    return <Badge tone="orange">Withdrawal</Badge>;
   }
   return (
-    <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-      {type}
+    <Badge tone="muted">
+      Swap {tx.debitCurrencyCode} → {tx.creditCurrencyCode}
+    </Badge>
+  );
+}
+
+function StatusBadge({
+  status,
+  flagReason,
+}: {
+  status: string;
+  flagReason: string | null;
+}) {
+  if (status === "flagged" || flagReason) {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive"
+        title={flagReason ?? undefined}
+      >
+        <span aria-hidden>⚠</span>
+        {status}
+      </span>
+    );
+  }
+  if (status === "settled") {
+    return <Badge tone="green">settled</Badge>;
+  }
+  if (status === "pending") {
+    return <Badge tone="orange">pending</Badge>;
+  }
+  if (status === "reversed") {
+    return <Badge tone="muted">reversed</Badge>;
+  }
+  return <Badge tone="muted">{status}</Badge>;
+}
+
+type Tone = "green" | "primary" | "blue" | "orange" | "muted";
+
+function Badge({
+  tone,
+  children,
+}: {
+  tone: Tone;
+  children: React.ReactNode;
+}) {
+  const styles: Record<Tone, string> = {
+    green:
+      "bg-green-500/10 text-green-400 before:bg-green-400",
+    primary: "bg-primary/10 text-primary before:bg-primary",
+    blue: "bg-sky-500/10 text-sky-400 before:bg-sky-400",
+    orange: "bg-orange-500/10 text-orange-400 before:bg-orange-400",
+    muted: "bg-muted text-muted-foreground before:bg-muted-foreground",
+  };
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[tone]} before:size-1.5 before:rounded-full before:content-['']`}
+    >
+      {children}
     </span>
   );
 }

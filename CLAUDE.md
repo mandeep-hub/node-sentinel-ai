@@ -7,64 +7,74 @@ Node Sentinel AI is a compliance monitoring platform for digital asset transacti
 ## Commands
 
 ```bash
-# Development (all apps in parallel)
+# Development (all apps in parallel via Turborepo)
 yarn dev
 
 # Single app
-yarn dev --filter=web             # dashboard only (port 3000)
-yarn dev --filter=transaction-engine
+yarn dev --filter=web                 # dashboard only (port 3000)
+yarn dev --filter=transaction-engine  # engine only (port 5000)
 
 # Build / lint / type-check
 yarn build
 yarn lint
 yarn check-types
-yarn format                       # Prettier over *.ts, *.tsx, *.md
+yarn format                           # Prettier over *.ts, *.tsx, *.md
 
-# Prisma (run from repo root — prisma.config.ts wires it to transaction-engine)
+# Prisma (run from repo root — prisma.config.ts points at apps/transaction-engine)
 npx prisma migrate dev
 npx prisma studio
 ```
+
+There is no test runner wired up.
 
 ## Architecture
 
 ### Request flow
 
 ```
-Browser → Next.js middleware (Auth0) → /app/api/transactions → transactionPoller → transaction-engine :5000
+Browser → Next.js middleware (Auth0) → /app/api/transactions → transactionPoller → transaction-engine :5000 → Postgres
 ```
 
-- `apps/dashboard/proxy.ts` is the Next.js middleware file (Auth0 wraps every request; unauthenticated users are redirected to `/auth/login`).
-- The dashboard never talks to the database directly — it proxies through the transaction-engine Express API.
-- `apps/dashboard/app/api/transactions/route.ts` is the only API route; it calls `lib/transactionPoller.ts` which hits `http://localhost:5000/transactions`.
+The dashboard never talks to the database directly — it proxies through the transaction-engine HTTP API. `apps/dashboard/proxy.ts` is the Next.js middleware file (Auth0 wraps every request; unauthenticated users are redirected to `/auth/login`). `apps/dashboard/lib/transactionPoller.ts` is the client to the engine.
 
 ### Transaction engine (`apps/transaction-engine`, port 5000)
 
-Express 5 app with no router files — all routes are inline in `src/index.ts`:
+Express 5 app. `src/index.ts` only mounts routers and calls `initializeApp()`. Code is split into `routes/ → controllers/ → services/`, with `models/`, `jobs/`, and `bootstrap/` alongside.
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /transactions?fromId=<id>` | Fetch all transactions, or only those after `fromId` |
-| `POST /transactions/generate` | Generate and persist one synthetic transaction |
-| `POST /transactions/generate-many` | Bulk generate 20 transactions |
-| `GET /convert?amount=&from=&to=` | Fiat/crypto currency conversion |
+Routers:
 
-A `setInterval` (40 s) auto-generates transactions continuously while the server is running.
+| Mount | File | Endpoints |
+|---|---|---|
+| `/transactions` | `routes/transactionRoutes.ts` | `GET /`, `POST /generate`, `POST /generate-many` |
+| `/convert` | `routes/exchangeRoutes.ts` | fiat/crypto conversion |
 
-**Services:**
-- `fxService.ts` — fetches live crypto prices from CoinGecko; results cached in memory (`PriceCache`)
-- `exchangeRateService.ts` — fiat conversions via CurrencyFreaks API
-- `transactionStore.ts` — thin wrapper around the Prisma client
-- `transactionGenerator.ts` — assembles a random `Transaction` (userId 1–10, BTC/ETH/SOL, USD/EUR/GBP, countries US/UK/DE/IR)
+`bootstrap/init.ts` runs on startup and is the source of all background work:
+1. `seedUsers`, `seedCurrencies`, `seedBalances` — idempotent DB seeding
+2. `updateCryptoPrices` once, then on a 40 s `setInterval` (CoinGecko, in-memory `PriceCache` in `fxService.ts`)
+3. `startTransactionJobs` — a 4 s `setInterval` that generates 1–5 random transactions per tick (`jobs/transactionJob.ts`)
+
+Critical service contract: **all transaction writes must go through `services/transactionService.ts::createTransaction`**, which wraps `transaction.create` + `updateBalances` in a single `prisma.$transaction`. Bypassing it (e.g. writing via `transactionStore` directly) will desync balances.
+
+Other services:
+- `fxService.ts` — live crypto prices, cached in memory
+- `exchangeRateService.ts` — fiat conversions via CurrencyFreaks
+- `transactionGenerator.ts` — assembles randomized `UnsavedTransaction` objects
+- `balanceService.ts` — applies a transaction's debit/credit deltas to `Balance` rows
 
 ### Dashboard (`apps/dashboard`, port 3000)
 
-Next.js 16 App Router. shadcn/ui components are installed locally under `apps/dashboard/components/ui/` (not in `packages/ui`). `packages/ui` holds minimal shared primitives (`button`, `card`, `code`) used across hypothetical future apps.
+Next.js 16 App Router. shadcn/ui components are installed locally under `apps/dashboard/components/ui/` (not in `packages/ui`). `packages/ui` holds minimal shared primitives (`button`, `card`, `code`). Tailwind 4 is used (PostCSS plugin; no v3 config file).
 
-Tailwind 4 is used (PostCSS plugin, not the v3 config file).
+### Database (Prisma + Postgres)
 
-### Database
+Schema at `apps/transaction-engine/prisma/schema.prisma`. Models:
 
-PostgreSQL via Prisma. Schema lives in `apps/transaction-engine/prisma/schema.prisma`. The single model is `Transaction` (uuid PK, userId int, transactionType, cryptoType, fiatAmount, cryptoAmount, currency, country, createdAt).
+- `User` — uuid id, name, email
+- `Currency` — `code` PK (e.g. `BTC`, `USD`), `kind`, `decimals`
+- `Balance` — composite PK `(userId, currencyCode)`, `Decimal(38,18)` amount
+- `Transaction` — uuid id, `kind`, optional `creditCurrencyCode`/`creditAmount` and `debitCurrencyCode`/`debitAmount` (both nullable so deposits, withdrawals, and exchanges share one shape), `status`, `flaggedAt`, `flagReason`, `metadata` JSON
+
+A transaction can have either or both sides set — `balanceService` interprets whichever side(s) are populated.
 
 ## Environment variables
 
