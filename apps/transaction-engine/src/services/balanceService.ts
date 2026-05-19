@@ -1,4 +1,9 @@
-export async function updateBalances(transaction: any, tx: any) {
+import { Prisma, Transaction } from "@prisma/client";
+
+export async function updateBalances(
+  transaction: Transaction,
+  tx: Prisma.TransactionClient,
+) {
   try {
     if (transaction.creditCurrencyCode && transaction.creditAmount) {
       const existingCreditBalance = await tx.balance.findUnique({
