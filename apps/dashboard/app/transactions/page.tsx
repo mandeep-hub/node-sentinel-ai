@@ -38,6 +38,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [openCases, setOpenCases] = useState(0);
 
   const fetchTransactions = useCallback(async () => {
     try {
@@ -57,16 +58,37 @@ export default function TransactionsPage() {
       setLoading(false);
     }
   }, []);
+  const fetchCaseSummary = useCallback(async () => {
+    try {
+      const response = await fetch("/api/cases/summary");
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      setOpenCases(data.openCases);
+    } catch (error) {
+      console.error("Failed to fetch case summary:", error);
+    }
+  }, []);
 
   useEffect(() => {
     fetchTransactions();
-    const interval = setInterval(fetchTransactions, 4000);
+    fetchCaseSummary();
+
+    const interval = setInterval(() => {
+      fetchTransactions();
+      fetchCaseSummary();
+    }, 4000);
+
     return () => clearInterval(interval);
-  }, [fetchTransactions]);
+  }, [fetchTransactions, fetchCaseSummary]);
 
   return (
-    <div className="min-h-screen bg-background px-6 py-8">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen bg-background px-6 py-8 text-foreground">
+      <div className="mx-auto max-w-7xl space-y-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-foreground">
@@ -85,6 +107,22 @@ export default function TransactionsPage() {
             {error}
           </div>
         )}
+        <div className="mb-8 rounded-3xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-lg backdrop-blur">
+          <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+            <button className="rounded-2xl bg-blue-600 px-8 py-4 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-700">
+              Request new case →
+            </button>
+
+            <div className="inline-flex items-center gap-3 rounded-2xl border border-border bg-background px-5 py-3 text-sm font-medium text-foreground shadow-sm">
+              <span className="h-3 w-3 rounded-full bg-green-500" />
+              {openCases} open cases
+            </div>
+          </div>
+
+          <p className="mt-5 text-sm text-muted-foreground">
+            There are {openCases} cases open — request one to work on.
+          </p>
+        </div>
 
         {loading && transactions.length === 0 ? (
           <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
@@ -213,18 +251,10 @@ function KindBadge({ tx }: { tx: Transaction }) {
   const debit = tx.debitCurrency;
 
   if (credit?.kind === "crypto" && debit?.kind === "fiat") {
-    return (
-      <Badge tone="green">
-        Bought {tx.creditCurrencyCode}
-      </Badge>
-    );
+    return <Badge tone="green">Bought {tx.creditCurrencyCode}</Badge>;
   }
   if (credit?.kind === "fiat" && debit?.kind === "crypto") {
-    return (
-      <Badge tone="primary">
-        Sold {tx.debitCurrencyCode}
-      </Badge>
-    );
+    return <Badge tone="primary">Sold {tx.debitCurrencyCode}</Badge>;
   }
   if (tx.kind === "deposit") {
     return <Badge tone="blue">Deposit</Badge>;
@@ -271,16 +301,9 @@ function StatusBadge({
 
 type Tone = "green" | "primary" | "blue" | "orange" | "muted";
 
-function Badge({
-  tone,
-  children,
-}: {
-  tone: Tone;
-  children: React.ReactNode;
-}) {
+function Badge({ tone, children }: { tone: Tone; children: React.ReactNode }) {
   const styles: Record<Tone, string> = {
-    green:
-      "bg-green-500/10 text-green-400 before:bg-green-400",
+    green: "bg-green-500/10 text-green-400 before:bg-green-400",
     primary: "bg-primary/10 text-primary before:bg-primary",
     blue: "bg-sky-500/10 text-sky-400 before:bg-sky-400",
     orange: "bg-orange-500/10 text-orange-400 before:bg-orange-400",
