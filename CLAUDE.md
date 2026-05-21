@@ -20,22 +20,32 @@ yarn lint
 yarn check-types
 yarn format                           # Prettier over *.ts, *.tsx, *.md
 
-# Prisma (run from repo root — prisma.config.ts points at apps/transaction-engine)
+# Prisma — there are TWO schemas, each with its own config file:
+# Engine schema (User/Currency/Balance/Transaction) — root prisma.config.ts
 npx prisma migrate dev
 npx prisma studio
+
+# Dashboard schema (Case) — apps/dashboard/prisma.dashboard.config.ts
+cd apps/dashboard && npx prisma migrate dev
 ```
 
-There is no test runner wired up.
+Both schemas use the same `DATABASE_URL` (one Postgres instance, two independently-migrated schemas). There is no test runner wired up.
 
 ## Architecture
 
 ### Request flow
 
 ```
-Browser → Next.js middleware (Auth0) → /app/api/transactions → transactionPoller → transaction-engine :5000 → Postgres
+Browser → Next.js middleware (Auth0) → /app/api/* → (engine HTTP for transactions) OR (dashboard Prisma for cases)
+                                                            ↓                                    ↓
+                                              transaction-engine :5000 → Postgres   →   same Postgres (separate schema)
 ```
 
-The dashboard never talks to the database directly — it proxies through the transaction-engine HTTP API. `apps/dashboard/proxy.ts` is the Next.js middleware file (Auth0 wraps every request; unauthenticated users are redirected to `/auth/login`). `apps/dashboard/lib/transactionPoller.ts` is the client to the engine.
+Two read paths:
+- **Transactions, balances, FX** — dashboard never reads these from Postgres directly. It calls the engine over HTTP via `apps/dashboard/lib/transactionPoller.ts` / `transactionApi.ts`.
+- **Cases** — the dashboard owns the `Case` model and reads/writes it via its own Prisma client (`apps/dashboard/lib/prisma.ts`, generated to `apps/dashboard/generated/prisma`). Cases are produced by the dashboard's fraud scanner, not the engine.
+
+Auth0 wraps every request via `apps/dashboard/proxy.ts` (the Next.js middleware file); unauthenticated users are redirected to `/auth/login`.
 
 ### Transaction engine (`apps/transaction-engine`, port 5000)
 
@@ -65,16 +75,30 @@ Other services:
 
 Next.js 16 App Router. shadcn/ui components are installed locally under `apps/dashboard/components/ui/` (not in `packages/ui`). `packages/ui` holds minimal shared primitives (`button`, `card`, `code`). Tailwind 4 is used (PostCSS plugin; no v3 config file).
 
+API routes under `app/api/`:
+- `transactions/` — proxies the engine
+- `cases/summary/` — reads from the dashboard's own Prisma
+- `scan/` — manual trigger for `fraudScanner.scanTransactions()`
+- `auth/` — Auth0
+
+Background work: `apps/dashboard/jobs/fraudScanJob.ts` runs a 10 s `setInterval` that fetches transactions from the engine and, for any matching the rules in `lib/fraudScanner.ts`, inserts a `Case` row via `lib/caseService.ts`. Cases are deduped by the `Case.transactionId` unique constraint.
+
 ### Database (Prisma + Postgres)
 
-Schema at `apps/transaction-engine/prisma/schema.prisma`. Models:
+Two schemas in one Postgres instance, owned by different apps:
 
+**Engine schema** (`apps/transaction-engine/prisma/schema.prisma`):
 - `User` — uuid id, name, email
 - `Currency` — `code` PK (e.g. `BTC`, `USD`), `kind`, `decimals`
 - `Balance` — composite PK `(userId, currencyCode)`, `Decimal(38,18)` amount
-- `Transaction` — uuid id, `kind`, optional `creditCurrencyCode`/`creditAmount` and `debitCurrencyCode`/`debitAmount` (both nullable so deposits, withdrawals, and exchanges share one shape), `status`, `flaggedAt`, `flagReason`, `metadata` JSON
+- `Transaction` — uuid id, `kind`, optional `creditCurrencyCode`/`creditAmount` and `debitCurrencyCode`/`debitAmount` (both nullable so deposits, withdrawals, and exchanges share one shape), `status`, `flaggedAt`, `flagReason`, optional `country` / `profession` compliance signals, `metadata` JSON
 
 A transaction can have either or both sides set — `balanceService` interprets whichever side(s) are populated.
+
+**Dashboard schema** (`apps/dashboard/prisma/schema.prisma`):
+- `Case` — uuid id, unique `caseId`, unique `transactionId`, `userId`, `amount` (`Decimal(38,18)`), `currency`, `transactionType`, `status`, `reason`, `createdAt`
+
+There is no foreign key between `Case.transactionId` and the engine's `Transaction.id` — they live in separate Prisma schemas. The dashboard treats the transaction id as an opaque string echoed back from the engine API.
 
 ## Environment variables
 
