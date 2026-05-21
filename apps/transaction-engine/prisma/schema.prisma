@@ -30,6 +30,7 @@ model User {
 
   balances     Balance[]
   transactions Transaction[]
+  cases        Case[]
  
 }
 
@@ -76,7 +77,27 @@ model Transaction {
   creditCurrency Currency? @relation("CreditCurrency", fields: [creditCurrencyCode], references: [code])
 
   debitCurrency Currency? @relation("DebitCurrency", fields: [debitCurrencyCode], references: [code])
+  
+  case Case[]
 
- 
 }
 
+model Case {
+  id String @id @default(uuid())
+  caseId String @unique
+  transactionId String @unique
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  userId String 
+  user User @relation(fields: [userId], references: [id])
+  amount Decimal @db.Decimal(38, 18)
+  currency String
+  transactionType String
+  status String @default("open")
+  reason String
+  assignedTo String?
+  assignedEmail String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  assignedAt DateTime?
+  resolvedAt DateTime?
+}

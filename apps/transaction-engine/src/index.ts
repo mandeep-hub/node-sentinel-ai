@@ -8,6 +8,7 @@ import transactionRoutes from "./routes/transactionRoutes";
 
 import exchangeRoutes from "./routes/exchangeRoutes";
 
+import caseRoutes from "./routes/caseRoutes";
 import { initializeApp } from "./bootstrap/init";
 
 const app = express();
@@ -19,6 +20,8 @@ app.use(express.json());
 app.use("/transactions", transactionRoutes);
 
 app.use("/convert", exchangeRoutes);
+
+app.use("/cases", caseRoutes);
 
 if (!process.env.COINGECKO_API_KEY) {
   console.log("COINGECKO_API_KEY is missing in .env");
