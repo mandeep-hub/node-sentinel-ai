@@ -40,6 +40,16 @@ function randomItem<T>(array: readonly T[]): T {
   return array[Math.floor(Math.random() * array.length)];
 }
 
+function generateFiatAmount() {
+  const isSuspicious = Math.random() < 0.05;
+
+  if (isSuspicious) {
+    return Math.floor(Math.random() * 70000) + 30000;
+  }
+
+  return Math.floor(Math.random() * 5000) + 1000;
+}
+
 export async function generateTransaction(): Promise<UnsavedTransaction> {
   const kind = randomItem(transactionKinds);
 
@@ -64,7 +74,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
   if (spendableBalances.length === 0) {
     const fiatCurrency = randomItem(fiatCurrencies);
 
-    const fiatAmount = Math.floor(Math.random() * 5000) + 1000;
+    const fiatAmount = generateFiatAmount();
 
     return {
       userId,
@@ -93,7 +103,13 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
   const maxSpendable = currentBalance * 0.2;
 
-  const spendAmount = Number((Math.random() * maxSpendable + 1).toFixed(2));
+  let spendAmount = Number((Math.random() * maxSpendable + 1).toFixed(2));
+
+  const generateLargeTransaction = Math.random() < 0.05;
+
+  if (generateLargeTransaction) {
+    spendAmount = Number((Math.random() * 70000 + 30000).toFixed(2));
+  }
 
   if (kind === "trade" && fiatCurrencies.includes(currencyCode)) {
     const cryptoCurrency: keyof PriceCache = randomItem(cryptoCurrencies);
@@ -184,7 +200,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
   const fiatCurrency = randomItem(fiatCurrencies);
 
-  const fiatAmount = Math.floor(Math.random() * 5000) + 1000;
+  const fiatAmount = generateFiatAmount();
 
   return {
     userId,

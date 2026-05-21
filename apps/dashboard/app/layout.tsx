@@ -3,8 +3,9 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { Toaster } from "sonner";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="en" className={cn("dark font-sans", geist.variable)}>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );
