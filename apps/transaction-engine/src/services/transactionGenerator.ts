@@ -6,7 +6,31 @@ const fiatCurrencies = ["USD", "EUR", "GBP"];
 
 const cryptoCurrencies = ["BTC", "ETH", "SOL"] as const;
 
-const countries = ["US", "UK", "DE", "IR"];
+const countries = [
+  "US",
+  "UK",
+  "DE",
+  "FR",
+  "BR",
+  "TR",
+  "AE",
+  "SG",
+  "IN",
+  "NG",
+  "IR",
+  "KP",
+];
+
+const professions = [
+  "Salaried professional",
+  "Self-employed / business owner",
+  "Import / export or e-commerce",
+  "Real estate",
+  "Crypto or financial services",
+  "Precious metals or commodities",
+  "Gambling, adult, arms, or cash-intensive business",
+  "Unclear activity",
+];
 
 const transactionKinds = ["deposit", "withdrawal", "trade"] as const;
 
@@ -29,6 +53,7 @@ export interface UnsavedTransaction {
 
   metadata?: {
     country: string;
+    profession: string;
 
     exchangeRate?: number;
   };
@@ -54,6 +79,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
   const kind = randomItem(transactionKinds);
 
   const country = randomItem(countries);
+  const profession = randomItem(professions);
 
   const status = randomItem(statuses);
 
@@ -89,6 +115,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
       metadata: {
         country,
+        profession,
       },
 
       createdAt: new Date(),
@@ -135,6 +162,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
       metadata: {
         country,
+        profession,
 
         exchangeRate: cryptoPrice,
       },
@@ -170,6 +198,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
       metadata: {
         country,
+        profession,
 
         exchangeRate: cryptoPrice,
       },
@@ -192,6 +221,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
       metadata: {
         country,
+        profession,
       },
 
       createdAt: new Date(),
@@ -215,6 +245,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
     metadata: {
       country,
+      profession,
     },
 
     createdAt: new Date(),
