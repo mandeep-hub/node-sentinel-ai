@@ -50,11 +50,10 @@ export interface UnsavedTransaction {
   debitAmount?: number;
 
   status: "settled" | "pending" | "flagged" | "reversed";
+  country: string;
+  profession: string;
 
   metadata?: {
-    country: string;
-    profession: string;
-
     exchangeRate?: number;
   };
 
@@ -112,11 +111,10 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       creditAmount: fiatAmount,
 
       status,
+      country,
+      profession,
 
-      metadata: {
-        country,
-        profession,
-      },
+      metadata: {},
 
       createdAt: new Date(),
     };
@@ -159,11 +157,10 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       creditAmount: cryptoAmount,
 
       status,
+      country,
+      profession,
 
       metadata: {
-        country,
-        profession,
-
         exchangeRate: cryptoPrice,
       },
 
@@ -195,11 +192,10 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       creditAmount: fiatAmount,
 
       status,
+      country,
+      profession,
 
       metadata: {
-        country,
-        profession,
-
         exchangeRate: cryptoPrice,
       },
 
@@ -218,11 +214,10 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       debitAmount: spendAmount,
 
       status,
+      country,
+      profession,
 
-      metadata: {
-        country,
-        profession,
-      },
+      metadata: {},
 
       createdAt: new Date(),
     };
@@ -243,10 +238,9 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
     status,
 
-    metadata: {
-      country,
-      profession,
-    },
+    country,
+    profession,
+    metadata: {},
 
     createdAt: new Date(),
   };
