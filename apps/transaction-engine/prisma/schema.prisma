@@ -66,6 +66,8 @@ model Transaction {
   flaggedAt DateTime?
 
   flagReason String?
+  country String?
+  profession String?
 
   createdAt DateTime @default(now())
 
