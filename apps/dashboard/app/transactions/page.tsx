@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import LogoutButton from "@/components/ui/LogoutButton";
 
 interface CurrencyRef {
   code: string;
@@ -40,6 +41,12 @@ interface Transaction {
   debitCurrency: CurrencyRef | null;
 }
 
+interface Case {
+  id: string;
+  caseId: string;
+  status: string;
+}
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +55,7 @@ export default function TransactionsPage() {
   const [openCases, setOpenCases] = useState(0);
   const caseLabel = openCases === 1 ? "case" : "cases";
   const verbLabel = openCases === 1 ? "is" : "are";
+  const [assignedCase, setAssignedCase] = useState<Case | null>(null);
 
   const fetchTransactions = useCallback(async () => {
     try {
@@ -110,6 +118,26 @@ export default function TransactionsPage() {
     return () => clearInterval(interval);
   }, [fetchTransactions, fetchOpenCases]);
 
+  const requestCase = async () => {
+    try {
+      const res = await fetch("/api/cases/assign", { method: "POST" });
+      const data = await res.json();
+
+      if (data.alreadyAssigned) {
+        toast.info("You already have an active case.");
+        setAssignedCase(data.case);
+      } else if (data.noCases) {
+        toast.info("No open cases available.");
+      } else {
+        toast.success(`Case ${data.case.caseId} assigned to you.`);
+        setAssignedCase(data.case);
+        fetchOpenCases();
+      }
+    } catch {
+      toast.error("Failed to request a case.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background px-6 py-8 text-foreground">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -125,6 +153,7 @@ export default function TransactionsPage() {
               </p>
             )}
           </div>
+          <LogoutButton />
         </div>
 
         {error && (
@@ -142,7 +171,21 @@ export default function TransactionsPage() {
                   : `${openCases} open ${caseLabel}`}
               </Badge>
 
-              <Button>Request new case</Button>
+              {assignedCase ? (
+                <Button
+                  className="bg-yellow-600 hover:bg-yellow-700 text-black font-semibold"
+                  asChild
+                >
+                  <a href={`/cases/${assignedCase.caseId}`}>View my case</a>
+                </Button>
+              ) : (
+                <Button
+                  onClick={requestCase}
+                  className="bg-yellow-500 hover:bg-yellow-700 text-black font-semibold"
+                >
+                  Request new case
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

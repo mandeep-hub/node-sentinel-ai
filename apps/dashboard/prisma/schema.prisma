@@ -16,24 +16,19 @@ datasource db {
 
 model Case {
   id String @id @default(uuid())
-
   caseId String @unique
-
   transactionId String @unique
-
-  userId String
-
+  userId String 
   amount Decimal @db.Decimal(38, 18)
-
   currency String
-
   transactionType String
-
-  status String
-
+  status String @default("open")
   reason String
   country    String?
   profession String?
 
   createdAt DateTime @default(now())
+  assignedAt DateTime?
+  assignedTo String?
+  assignedEmail String?
 }

@@ -19,7 +19,6 @@ model Currency {
 
   debitTransactions  Transaction[] @relation("DebitCurrency")
   creditTransactions Transaction[] @relation("CreditCurrency")
-
   balances Balance[]
 }
 
@@ -30,7 +29,6 @@ model User {
 
   balances     Balance[]
   transactions Transaction[]
- 
 }
 
 model Balance {
@@ -48,37 +46,20 @@ model Balance {
 
 model Transaction {
   id String @id @default(uuid())
-
   userId String
-
   kind String
-
   creditCurrencyCode String?
-
   creditAmount Decimal? @db.Decimal(38, 18)
-
   debitCurrencyCode String?
-
   debitAmount Decimal? @db.Decimal(38, 18)
-
   status String
-
   flaggedAt DateTime?
-
   flagReason String?
   country String?
   profession String?
-
   createdAt DateTime @default(now())
-
   metadata Json?
-
   user User @relation(fields: [userId], references: [id])
-
   creditCurrency Currency? @relation("CreditCurrency", fields: [creditCurrencyCode], references: [code])
-
   debitCurrency Currency? @relation("DebitCurrency", fields: [debitCurrencyCode], references: [code])
-
- 
 }
-

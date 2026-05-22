@@ -20,6 +20,7 @@ app.use("/transactions", transactionRoutes);
 
 app.use("/convert", exchangeRoutes);
 
+
 if (!process.env.COINGECKO_API_KEY) {
   console.log("COINGECKO_API_KEY is missing in .env");
 }
