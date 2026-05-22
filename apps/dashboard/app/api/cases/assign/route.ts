@@ -8,11 +8,11 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const analystId = session.user.sub;
+  const analystId = session.user.email;
   const analystEmail = session.user.email;
 
   const existing = await prisma.case.findFirst({
-    where: { assignedTo: analystId, status: "IN_REVIEW" },
+    where: { assignedTo: analystEmail, status: "IN_REVIEW" },
   });
   if (existing) {
     return NextResponse.json({ alreadyAssigned: true, case: existing });
@@ -27,7 +27,7 @@ export async function POST() {
   const assigned = await prisma.case.update({
     where: { id: randomCase.id },
     data: {
-      assignedTo: analystId,
+      assignedTo: analystEmail,
       assignedEmail: analystEmail,
       assignedAt: new Date(),
       status: "IN_REVIEW",
