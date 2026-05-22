@@ -1,31 +1,62 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { MOCK_CASES } from "../mock-data";
+"use client";
 
-export default async function CaseDetailPage({
+import Link from "next/link";
+import { use, useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+
+type CaseData = {
+  id: string;
+  caseId: string;
+  transactionId: string;
+  userId: string;
+  amount: string;
+  currency: string;
+  transactionType: string;
+  status: string;
+  reason: string;
+  country: string | null;
+  profession: string | null;
+  createdAt: string;
+  assignedAt: string | null;
+  assignedTo: string | null;
+  assignedEmail: string | null;
+};
+
+export default function CaseDetailPage({
   params,
 }: {
   params: Promise<{ caseId: string }>;
 }) {
-  const { caseId } = await params;
-  const caseData = MOCK_CASES.find((c) => c.caseId === caseId);
+  const { caseId } = use(params);
+  const [caseData, setCaseData] = useState<CaseData | null>(null);
+  const [state, setState] = useState<"loading" | "found" | "not-found" | "error">(
+    "loading",
+  );
 
-  if (!caseData) {
-    return (
-      <div className="min-h-screen bg-background px-6 py-8">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-6">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/cases">← Back to Cases</Link>
-            </Button>
-          </div>
-          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
-            <p className="text-sm text-muted-foreground">Case not found.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/cases/${caseId}`)
+      .then(async (res) => {
+        if (cancelled) return;
+        if (res.status === 404) {
+          setState("not-found");
+          return;
+        }
+        if (!res.ok) {
+          setState("error");
+          return;
+        }
+        const data = (await res.json()) as CaseData;
+        setCaseData(data);
+        setState("found");
+      })
+      .catch(() => {
+        if (!cancelled) setState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [caseId]);
 
   return (
     <div className="min-h-screen bg-background px-6 py-8">
@@ -36,44 +67,102 @@ export default async function CaseDetailPage({
           </Button>
         </div>
 
-        <div className="mb-4 flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-foreground">Case Details</h1>
-          <StatusBadge status={caseData.status} />
-        </div>
+        {state === "loading" && (
+          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          </div>
+        )}
 
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
-          <dl className="divide-y divide-border">
-            <DetailRow label="Case ID">
-              <span className="font-mono text-sm text-foreground">{caseData.caseId}</span>
-            </DetailRow>
-            <DetailRow label="User ID">
-              <span className="text-sm text-foreground">{caseData.userId}</span>
-            </DetailRow>
-            <DetailRow label="Amount">
-              <span className="font-mono text-sm text-foreground">
-                {caseData.currency}{" "}
-                {caseData.amount.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </DetailRow>
-            <DetailRow label="Transaction ID">
-              <span className="font-mono text-sm text-foreground">{caseData.transactionId}</span>
-            </DetailRow>
-            <DetailRow label="Currency">
-              <span className="font-mono text-sm uppercase text-foreground">{caseData.currency}</span>
-            </DetailRow>
-            <DetailRow label="Type">
-              <TypeBadge type={caseData.transactionType} />
-            </DetailRow>
-            <DetailRow label="Status">
-              <StatusBadge status={caseData.status} />
-            </DetailRow>
-          </dl>
-        </div>
+        {state === "not-found" && (
+          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
+            <p className="text-sm text-muted-foreground">Case not found.</p>
+          </div>
+        )}
+
+        {state === "error" && (
+          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
+            <p className="text-sm text-muted-foreground">Failed to load case.</p>
+          </div>
+        )}
+
+        {state === "found" && caseData && <CaseDetails caseData={caseData} />}
       </div>
     </div>
+  );
+}
+
+function CaseDetails({ caseData }: { caseData: CaseData }) {
+  const amount = Number(caseData.amount);
+  const createdAt = new Date(caseData.createdAt).toLocaleString();
+  const assignedAt = caseData.assignedAt
+    ? new Date(caseData.assignedAt).toLocaleString()
+    : null;
+
+  return (
+    <>
+      <div className="mb-4 flex items-center gap-3">
+        <h1 className="text-2xl font-semibold text-foreground">Case Details</h1>
+        <StatusBadge status={caseData.status} />
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <dl className="divide-y divide-border">
+          <DetailRow label="Case ID">
+            <span className="font-mono text-sm text-foreground">{caseData.caseId}</span>
+          </DetailRow>
+          <DetailRow label="User ID">
+            <span className="text-sm text-foreground">{caseData.userId}</span>
+          </DetailRow>
+          <DetailRow label="Amount">
+            <span className="font-mono text-sm text-foreground">
+              {caseData.currency}{" "}
+              {amount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 8,
+              })}
+            </span>
+          </DetailRow>
+          <DetailRow label="Transaction ID">
+            <span className="font-mono text-sm text-foreground">{caseData.transactionId}</span>
+          </DetailRow>
+          <DetailRow label="Currency">
+            <span className="font-mono text-sm uppercase text-foreground">{caseData.currency}</span>
+          </DetailRow>
+          <DetailRow label="Type">
+            <TypeBadge type={caseData.transactionType} />
+          </DetailRow>
+          <DetailRow label="Status">
+            <StatusBadge status={caseData.status} />
+          </DetailRow>
+          <DetailRow label="Reason">
+            <span className="text-sm text-foreground">{caseData.reason}</span>
+          </DetailRow>
+          <DetailRow label="Country">
+            <span className="text-sm text-foreground">
+              {caseData.country ?? <span className="text-muted-foreground">—</span>}
+            </span>
+          </DetailRow>
+          <DetailRow label="Profession">
+            <span className="text-sm text-foreground">
+              {caseData.profession ?? <span className="text-muted-foreground">—</span>}
+            </span>
+          </DetailRow>
+          <DetailRow label="Assigned To">
+            <span className="text-sm text-foreground">
+              {caseData.assignedTo ?? <span className="text-muted-foreground">Unassigned</span>}
+            </span>
+          </DetailRow>
+          <DetailRow label="Assigned At">
+            <span className="text-sm text-foreground">
+              {assignedAt ?? <span className="text-muted-foreground">—</span>}
+            </span>
+          </DetailRow>
+          <DetailRow label="Created At">
+            <span className="text-sm text-foreground">{createdAt}</span>
+          </DetailRow>
+        </dl>
+      </div>
+    </>
   );
 }
 
@@ -86,44 +175,60 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function TypeBadge({ type }: { type: "BUY" | "SELL" }) {
-  if (type === "BUY") {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
-        <span className="size-1.5 rounded-full bg-green-400" />
-        BUY
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-      <span className="size-1.5 rounded-full bg-primary" />
-      SELL
-    </span>
-  );
-}
-
-function StatusBadge({ status }: { status: "open" | "processing" | "closed" }) {
-  if (status === "open") {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-        <span className="size-1.5 rounded-full bg-primary" />
-        open
-      </span>
-    );
-  }
-  if (status === "processing") {
+function TypeBadge({ type }: { type: string }) {
+  if (type === "deposit") {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
         <span className="size-1.5 rounded-full bg-blue-400" />
-        processing
+        deposit
+      </span>
+    );
+  }
+  if (type === "withdrawal") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-medium text-orange-400">
+        <span className="size-1.5 rounded-full bg-orange-400" />
+        withdrawal
+      </span>
+    );
+  }
+  if (type === "trade") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
+        <span className="size-1.5 rounded-full bg-green-400" />
+        trade
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
       <span className="size-1.5 rounded-full bg-muted-foreground" />
-      closed
+      {type}
+    </span>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === "OPEN") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+        <span className="size-1.5 rounded-full bg-primary" />
+        OPEN
+      </span>
+    );
+  }
+  if (status === "IN_REVIEW") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
+        <span className="size-1.5 rounded-full bg-blue-400" />
+        IN_REVIEW
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+      <span className="size-1.5 rounded-full bg-muted-foreground" />
+      {status}
     </span>
   );
 }
