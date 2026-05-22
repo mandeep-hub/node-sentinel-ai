@@ -6,7 +6,31 @@ const fiatCurrencies = ["USD", "EUR", "GBP"];
 
 const cryptoCurrencies = ["BTC", "ETH", "SOL"] as const;
 
-const countries = ["US", "UK", "DE", "IR"];
+const countries = [
+  "US",
+  "UK",
+  "DE",
+  "FR",
+  "BR",
+  "TR",
+  "AE",
+  "SG",
+  "IN",
+  "NG",
+  "IR",
+  "KP",
+];
+
+const professions = [
+  "Salaried professional",
+  "Self-employed / business owner",
+  "Import / export or e-commerce",
+  "Real estate",
+  "Crypto or financial services",
+  "Precious metals or commodities",
+  "Gambling, adult, arms, or cash-intensive business",
+  "Unclear activity",
+];
 
 const transactionKinds = ["deposit", "withdrawal", "trade"] as const;
 
@@ -26,10 +50,10 @@ export interface UnsavedTransaction {
   debitAmount?: number;
 
   status: "settled" | "pending" | "flagged" | "reversed";
+  country: string;
+  profession: string;
 
   metadata?: {
-    country: string;
-
     exchangeRate?: number;
   };
 
@@ -40,10 +64,21 @@ function randomItem<T>(array: readonly T[]): T {
   return array[Math.floor(Math.random() * array.length)];
 }
 
+function generateFiatAmount() {
+  const isSuspicious = Math.random() < 0.05;
+
+  if (isSuspicious) {
+    return Math.floor(Math.random() * 70000) + 30000;
+  }
+
+  return Math.floor(Math.random() * 5000) + 1000;
+}
+
 export async function generateTransaction(): Promise<UnsavedTransaction> {
   const kind = randomItem(transactionKinds);
 
   const country = randomItem(countries);
+  const profession = randomItem(professions);
 
   const status = randomItem(statuses);
 
@@ -64,7 +99,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
   if (spendableBalances.length === 0) {
     const fiatCurrency = randomItem(fiatCurrencies);
 
-    const fiatAmount = Math.floor(Math.random() * 5000) + 1000;
+    const fiatAmount = generateFiatAmount();
 
     return {
       userId,
@@ -76,10 +111,10 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       creditAmount: fiatAmount,
 
       status,
+      country,
+      profession,
 
-      metadata: {
-        country,
-      },
+      metadata: {},
 
       createdAt: new Date(),
     };
@@ -93,7 +128,13 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
   const maxSpendable = currentBalance * 0.2;
 
-  const spendAmount = Number((Math.random() * maxSpendable + 1).toFixed(2));
+  let spendAmount = Number((Math.random() * maxSpendable + 1).toFixed(2));
+
+  const generateLargeTransaction = Math.random() < 0.05;
+
+  if (generateLargeTransaction) {
+    spendAmount = Number((Math.random() * 70000 + 30000).toFixed(2));
+  }
 
   if (kind === "trade" && fiatCurrencies.includes(currencyCode)) {
     const cryptoCurrency: keyof PriceCache = randomItem(cryptoCurrencies);
@@ -116,10 +157,10 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       creditAmount: cryptoAmount,
 
       status,
+      country,
+      profession,
 
       metadata: {
-        country,
-
         exchangeRate: cryptoPrice,
       },
 
@@ -151,10 +192,10 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       creditAmount: fiatAmount,
 
       status,
+      country,
+      profession,
 
       metadata: {
-        country,
-
         exchangeRate: cryptoPrice,
       },
 
@@ -173,10 +214,10 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       debitAmount: spendAmount,
 
       status,
+      country,
+      profession,
 
-      metadata: {
-        country,
-      },
+      metadata: {},
 
       createdAt: new Date(),
     };
@@ -184,7 +225,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
   const fiatCurrency = randomItem(fiatCurrencies);
 
-  const fiatAmount = Math.floor(Math.random() * 5000) + 1000;
+  const fiatAmount = generateFiatAmount();
 
   return {
     userId,
@@ -197,9 +238,9 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
     status,
 
-    metadata: {
-      country,
-    },
+    country,
+    profession,
+    metadata: {},
 
     createdAt: new Date(),
   };
