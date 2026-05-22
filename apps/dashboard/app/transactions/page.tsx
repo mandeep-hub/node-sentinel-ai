@@ -32,6 +32,8 @@ interface Transaction {
   status: string;
   flaggedAt: string | null;
   flagReason: string | null;
+  country: string | null;
+  profession: string | null;
   createdAt: string;
   metadata: unknown;
   user: UserRef;
@@ -230,6 +232,14 @@ export default function TransactionsPage() {
                   </th>
 
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Country
+                  </th>
+
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    Profession
+                  </th>
+
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                     Date
                   </th>
                 </tr>
@@ -286,6 +296,17 @@ export default function TransactionsPage() {
                           status={tx.status}
                           flagReason={tx.flagReason}
                         />
+                      </td>
+
+                      <td className="px-4 py-3 text-xs uppercase text-muted-foreground">
+                        {tx.country ?? "—"}
+                      </td>
+
+                      <td
+                        className="max-w-[12rem] overflow-hidden text-ellipsis whitespace-nowrap px-4 py-3 text-xs text-muted-foreground"
+                        title={tx.profession ?? undefined}
+                      >
+                        {tx.profession ?? "—"}
                       </td>
 
                       <td className="px-4 py-3 text-xs text-muted-foreground">

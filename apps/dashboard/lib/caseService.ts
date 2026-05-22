@@ -10,6 +10,9 @@ type Transaction = {
   debitCurrencyCode?: string;
 
   debitAmount?: number;
+  country?: string;
+
+  profession?: string;
 };
 
 export async function createCaseForSuspiciousTransaction(
@@ -50,6 +53,9 @@ export async function createCaseForSuspiciousTransaction(
       status: "OPEN",
 
       reason: "Large USD debit transaction exceeded 30k threshold",
+      country: transaction.country,
+
+      profession: transaction.profession,
     },
   });
 }
