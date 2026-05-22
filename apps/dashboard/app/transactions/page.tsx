@@ -39,6 +39,12 @@ interface Transaction {
   debitCurrency: CurrencyRef | null;
 }
 
+interface Case {
+  id: string;
+  caseId: string;
+  status: string;
+}
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +53,7 @@ export default function TransactionsPage() {
   const [openCases, setOpenCases] = useState(0);
   const caseLabel = openCases === 1 ? "case" : "cases";
   const verbLabel = openCases === 1 ? "is" : "are";
+  const [assignedCase, setAssignedCase] = useState<Case | null>(null);
 
   const fetchTransactions = useCallback(async () => {
     try {
@@ -116,10 +123,12 @@ export default function TransactionsPage() {
 
       if (data.alreadyAssigned) {
         toast.info("You already have an active case.");
+        setAssignedCase(data.case);
       } else if (data.noCases) {
         toast.info("No open cases available.");
       } else {
         toast.success(`Case ${data.case.caseId} assigned to you.`);
+        setAssignedCase(data.case);
         fetchOpenCases();
       }
     } catch {
@@ -160,12 +169,21 @@ export default function TransactionsPage() {
                   : `${openCases} open ${caseLabel}`}
               </Badge>
 
-              <Button
-                onClick={requestCase}
-                className="bg-yellow-500 hover:bg-yellow-700 text-black font-semibold"
-              >
-                Request new case
-              </Button>
+              {assignedCase ? (
+                <Button
+                  className="bg-yellow-600 hover:bg-yellow-700 text-black font-semibold"
+                  asChild
+                >
+                  <a href={`/cases/${assignedCase.caseId}`}>View my case</a>
+                </Button>
+              ) : (
+                <Button
+                  onClick={requestCase}
+                  className="bg-yellow-500 hover:bg-yellow-700 text-black font-semibold"
+                >
+                  Request new case
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
