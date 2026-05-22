@@ -19,7 +19,6 @@ model Currency {
 
   debitTransactions  Transaction[] @relation("DebitCurrency")
   creditTransactions Transaction[] @relation("CreditCurrency")
-
   balances Balance[]
 }
 
@@ -30,8 +29,6 @@ model User {
 
   balances     Balance[]
   transactions Transaction[]
-  cases        Case[]
- 
 }
 
 model Balance {
@@ -49,57 +46,20 @@ model Balance {
 
 model Transaction {
   id String @id @default(uuid())
-
   userId String
-
   kind String
-
   creditCurrencyCode String?
-
   creditAmount Decimal? @db.Decimal(38, 18)
-
   debitCurrencyCode String?
-
   debitAmount Decimal? @db.Decimal(38, 18)
-
   status String
-
   flaggedAt DateTime?
-
   flagReason String?
   country String?
   profession String?
-
   createdAt DateTime @default(now())
-
   metadata Json?
-
   user User @relation(fields: [userId], references: [id])
-
   creditCurrency Currency? @relation("CreditCurrency", fields: [creditCurrencyCode], references: [code])
-
   debitCurrency Currency? @relation("DebitCurrency", fields: [debitCurrencyCode], references: [code])
-  
-  case Case[]
-
-}
-
-model Case {
-  id String @id @default(uuid())
-  caseId String @unique
-  transactionId String @unique
-  transaction Transaction @relation(fields: [transactionId], references: [id])
-  userId String 
-  user User @relation(fields: [userId], references: [id])
-  amount Decimal @db.Decimal(38, 18)
-  currency String
-  transactionType String
-  status String @default("open")
-  reason String
-  assignedTo String?
-  assignedEmail String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  assignedAt DateTime?
-  resolvedAt DateTime?
 }

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import LogoutButton from "@/components/ui/LogoutButton";
 
 interface CurrencyRef {
   code: string;
@@ -108,6 +109,24 @@ export default function TransactionsPage() {
     return () => clearInterval(interval);
   }, [fetchTransactions, fetchOpenCases]);
 
+  const requestCase = async () => {
+    try {
+      const res = await fetch("/api/cases/assign", { method: "POST" });
+      const data = await res.json();
+
+      if (data.alreadyAssigned) {
+        toast.info("You already have an active case.");
+      } else if (data.noCases) {
+        toast.info("No open cases available.");
+      } else {
+        toast.success(`Case ${data.case.caseId} assigned to you.`);
+        fetchOpenCases();
+      }
+    } catch {
+      toast.error("Failed to request a case.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background px-6 py-8 text-foreground">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -123,6 +142,7 @@ export default function TransactionsPage() {
               </p>
             )}
           </div>
+          <LogoutButton />
         </div>
 
         {error && (
@@ -140,7 +160,12 @@ export default function TransactionsPage() {
                   : `${openCases} open ${caseLabel}`}
               </Badge>
 
-              <Button>Request new case</Button>
+              <Button
+                onClick={requestCase}
+                className="bg-yellow-500 hover:bg-yellow-700 text-black font-semibold"
+              >
+                Request new case
+              </Button>
             </div>
           </CardContent>
         </Card>
