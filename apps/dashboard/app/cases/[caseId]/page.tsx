@@ -63,7 +63,7 @@ export default function CaseDetailPage({
       <div className="mx-auto max-w-3xl">
         <div className="mb-6">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/cases">← Back to Cases</Link>
+            <Link href="/transactions">← Back to Transactions</Link>
           </Button>
         </div>
 
