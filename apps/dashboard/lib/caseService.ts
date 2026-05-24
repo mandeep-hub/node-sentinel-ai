@@ -1,5 +1,7 @@
 import { prisma } from "./prisma";
 
+import { convertCurrency } from "./exchangeRateService";
+
 type Transaction = {
   id: string;
 
@@ -10,6 +12,11 @@ type Transaction = {
   debitCurrencyCode?: string;
 
   debitAmount?: number;
+
+  creditCurrencyCode?: string;
+
+  creditAmount?: number;
+
   country?: string;
 
   profession?: string;
@@ -20,7 +27,27 @@ export async function createCaseForSuspiciousTransaction(
 ) {
   const debitAmount = Number(transaction.debitAmount || 0);
 
-  const isSuspicious = debitAmount >= 30000;
+  const creditAmount = Number(transaction.creditAmount || 0);
+
+  const debitCurrency = transaction.debitCurrencyCode || "USD";
+
+  const creditCurrency = transaction.creditCurrencyCode || "USD";
+
+  const debitAmountInUsd =
+    debitAmount > 0
+      ? await convertCurrency(debitAmount, debitCurrency, "USD")
+      : 0;
+
+  const creditAmountInUsd =
+    creditAmount > 0
+      ? await convertCurrency(creditAmount, creditCurrency, "USD")
+      : 0;
+
+  const isDebitSuspicious = debitAmountInUsd >= 10000;
+
+  const isCreditSuspicious = creditAmountInUsd >= 10000;
+
+  const isSuspicious = isDebitSuspicious || isCreditSuspicious;
 
   if (!isSuspicious) {
     return null;
@@ -33,8 +60,16 @@ export async function createCaseForSuspiciousTransaction(
   });
 
   if (existingCase) {
-    return existingCase;
+    return null;
   }
+
+  const caseAmount = isDebitSuspicious ? debitAmount : creditAmount;
+
+  const caseCurrency = isDebitSuspicious ? debitCurrency : creditCurrency;
+
+  const reason = isDebitSuspicious
+    ? "Debit transaction exceeded 10k USD threshold"
+    : "Credit transaction exceeded 10k USD threshold";
 
   return prisma.case.create({
     data: {
@@ -44,15 +79,16 @@ export async function createCaseForSuspiciousTransaction(
 
       userId: transaction.userId,
 
-      amount: debitAmount,
+      amount: caseAmount,
 
-      currency: transaction.debitCurrencyCode!,
+      currency: caseCurrency,
 
       transactionType: transaction.kind,
 
       status: "OPEN",
 
-      reason: "Large USD debit transaction exceeded 30k threshold",
+      reason,
+
       country: transaction.country,
 
       profession: transaction.profession,
