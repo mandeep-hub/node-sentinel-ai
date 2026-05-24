@@ -1,6 +1,6 @@
-import { prisma } from "./prisma";
-
 import { getCryptoPrice, PriceCache } from "./fxService";
+
+const statuses = ["settled", "pending", "reversed"] as const;
 
 const fiatCurrencies = ["USD", "EUR", "GBP"];
 
@@ -32,10 +32,6 @@ const professions = [
   "Unclear activity",
 ];
 
-const transactionKinds = ["deposit", "withdrawal", "trade"] as const;
-
-const statuses = ["settled", "pending", "flagged", "reversed"] as const;
-
 export interface UnsavedTransaction {
   userId: string;
 
@@ -50,7 +46,9 @@ export interface UnsavedTransaction {
   debitAmount?: number;
 
   status: "settled" | "pending" | "flagged" | "reversed";
+
   country: string;
+
   profession: string;
 
   metadata?: {
@@ -68,29 +66,33 @@ function generateFiatAmount() {
   const isSuspicious = Math.random() < 0.05;
 
   if (isSuspicious) {
-    return Math.floor(Math.random() * 70000) + 30000;
+    return Math.floor(Math.random() * 40000) + 10000;
   }
 
   return Math.floor(Math.random() * 5000) + 1000;
 }
 
+function generateCryptoUsdEquivalent() {
+  return Number((Math.random() * 40000 + 10000).toFixed(2));
+}
+
 export async function generateTransaction(): Promise<UnsavedTransaction> {
-  const kind = randomItem(transactionKinds);
+  let status: "settled" | "pending" | "flagged" | "reversed";
 
   const country = randomItem(countries);
-  const profession = randomItem(professions);
 
-  const status = randomItem(statuses);
+  const profession = randomItem(professions);
 
   const demoUserIds = ["user-1", "user-2", "user-3"];
 
   const userId = demoUserIds[Math.floor(Math.random() * demoUserIds.length)];
 
-  const balances = await prisma.balance.findMany({
-    where: {
-      userId,
+  const balances = [
+    {
+      currencyCode: randomItem([...fiatCurrencies, ...cryptoCurrencies]),
+      amount: 50000,
     },
-  });
+  ];
 
   const spendableBalances = balances.filter(
     (balance) => Number(balance.amount) > 10,
@@ -100,6 +102,14 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
     const fiatCurrency = randomItem(fiatCurrencies);
 
     const fiatAmount = generateFiatAmount();
+
+    const amount = Number(fiatAmount);
+
+    const amountInUsd = amount;
+
+    const isSuspicious = amountInUsd >= 10000;
+
+    status = isSuspicious ? "flagged" : randomItem(statuses);
 
     return {
       userId,
@@ -111,7 +121,9 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       creditAmount: fiatAmount,
 
       status,
+
       country,
+
       profession,
 
       metadata: {},
@@ -133,8 +145,18 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
   const generateLargeTransaction = Math.random() < 0.05;
 
   if (generateLargeTransaction) {
-    spendAmount = Number((Math.random() * 70000 + 30000).toFixed(2));
+    if (cryptoCurrencies.includes(currencyCode as keyof PriceCache)) {
+      const cryptoPrice = getCryptoPrice(currencyCode as keyof PriceCache);
+
+      const suspiciousUsdAmount = generateCryptoUsdEquivalent();
+
+      spendAmount = Number((suspiciousUsdAmount / cryptoPrice).toFixed(6));
+    } else {
+      spendAmount = Number((Math.random() * 40000 + 10000).toFixed(2));
+    }
   }
+
+  const kind = randomItem(["deposit", "withdrawal", "trade"] as const);
 
   if (kind === "trade" && fiatCurrencies.includes(currencyCode)) {
     const cryptoCurrency: keyof PriceCache = randomItem(cryptoCurrencies);
@@ -142,6 +164,14 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
     const cryptoPrice = getCryptoPrice(cryptoCurrency);
 
     const cryptoAmount = Number((spendAmount / cryptoPrice).toFixed(6));
+
+    const amount = Number(spendAmount);
+
+    const amountInUsd = amount;
+
+    const isSuspicious = amountInUsd >= 10000 || generateLargeTransaction;
+
+    status = isSuspicious ? "flagged" : randomItem(statuses);
 
     return {
       userId,
@@ -157,7 +187,9 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       creditAmount: cryptoAmount,
 
       status,
+
       country,
+
       profession,
 
       metadata: {
@@ -178,6 +210,14 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
     const fiatAmount = Number((spendAmount * cryptoPrice).toFixed(2));
 
+    const amount = Number(fiatAmount);
+
+    const amountInUsd = amount;
+
+    const isSuspicious = amountInUsd >= 10000 || generateLargeTransaction;
+
+    status = isSuspicious ? "flagged" : randomItem(statuses);
+
     return {
       userId,
 
@@ -192,7 +232,9 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       creditAmount: fiatAmount,
 
       status,
+
       country,
+
       profession,
 
       metadata: {
@@ -204,6 +246,14 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
   }
 
   if (kind === "withdrawal") {
+    const amount = Number(spendAmount);
+
+    const amountInUsd = amount;
+
+    const isSuspicious = amountInUsd >= 10000 || generateLargeTransaction;
+
+    status = isSuspicious ? "flagged" : randomItem(statuses);
+
     return {
       userId,
 
@@ -214,7 +264,9 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
       debitAmount: spendAmount,
 
       status,
+
       country,
+
       profession,
 
       metadata: {},
@@ -226,6 +278,14 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
   const fiatCurrency = randomItem(fiatCurrencies);
 
   const fiatAmount = generateFiatAmount();
+
+  const amount = Number(fiatAmount);
+
+  const amountInUsd = amount;
+
+  const isSuspicious = amountInUsd >= 10000 || generateLargeTransaction;
+
+  status = isSuspicious ? "flagged" : randomItem(statuses);
 
   return {
     userId,
@@ -239,7 +299,9 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
     status,
 
     country,
+
     profession,
+
     metadata: {},
 
     createdAt: new Date(),

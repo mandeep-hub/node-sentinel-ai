@@ -22,5 +22,5 @@ export async function createRandomTransactions() {
 }
 
 export function startTransactionJobs() {
-  setInterval(createRandomTransactions, 4000);
+  setInterval(createRandomTransactions, 20000);
 }
