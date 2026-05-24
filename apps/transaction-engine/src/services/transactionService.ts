@@ -15,7 +15,13 @@ export async function createTransaction(
 
       await updateBalances(createdTransaction, dbTx);
 
-      await fetch("http://localhost:3000/api/cases", {
+      const dashboardUrl = process.env.DASHBOARD_URL;
+
+      if (!dashboardUrl) {
+        throw new Error("DASHBOARD_URL is not defined");
+      }
+
+      await fetch(`${dashboardUrl}/api/cases`, {
         method: "POST",
 
         headers: {
