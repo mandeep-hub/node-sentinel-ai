@@ -31,4 +31,12 @@ model Case {
   assignedAt DateTime?
   assignedTo String?
   assignedEmail String?
+
+  escalated Boolean @default(false)
+  escalatedAt DateTime?
+  messageSent Boolean @default(false)
+  messageSentAt DateTime?
+  notes String?
+  resolvedAt DateTime?
+  autoAssignOnResolve Boolean @default(false)
 }
