@@ -20,6 +20,8 @@ type CaseData = {
   assignedAt: string | null;
   assignedTo: string | null;
   assignedEmail: string | null;
+  messageSent: boolean;
+  messageSentAt: string | null;
   escalated: boolean;
   escalatedAt: string | null;
 };
@@ -90,7 +92,7 @@ export default function CaseDetailPage({
         {state === "found" && caseData && (
           <>
             <EscalateBar caseData={caseData} onUpdate={setCaseData} />
-            <CaseDetails caseData={caseData} />
+            <CaseDetails caseData={caseData} setCaseData={setCaseData} />
           </>
         )}
       </div>
@@ -143,16 +145,75 @@ function EscalateBar({
   );
 }
 
-function CaseDetails({ caseData }: { caseData: CaseData }) {
+function CaseDetails({
+  caseData,
+  setCaseData,
+}: {
+  caseData: CaseData;
+  setCaseData: (data: CaseData) => void;
+}) {
   const amount = Number(caseData.amount);
   const createdAt = new Date(caseData.createdAt).toLocaleString();
   const assignedAt = caseData.assignedAt
     ? new Date(caseData.assignedAt).toLocaleString()
     : null;
+  const [sending, setSending] = useState(false);
+
+  const handleSendMessage = async () => {
+    setSending(true);
+    try {
+      const res = await fetch(`/api/cases/${caseData.caseId}/message`, {
+        method: "PATCH",
+      });
+      if (!res.ok) return;
+      const updated = (await res.json()) as CaseData;
+      setCaseData(updated);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const messageSentAt = caseData.messageSentAt
+    ? new Date(caseData.messageSentAt).toLocaleString()
+    : null;
 
   return (
     <>
-      <h1 className="mb-4 text-2xl font-semibold text-foreground">Case Details</h1>
+      <div className="mb-4 flex items-center gap-3">
+        <h1 className="text-2xl font-semibold text-foreground">Case Details</h1>
+      </div>
+
+      <div className="mb-4 flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-4">
+        <span className="text-sm font-medium text-muted-foreground">Message Customer</span>
+        <span
+          className={
+            caseData.messageSent
+              ? "inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400"
+              : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+          }
+        >
+          <span
+            className={
+              caseData.messageSent
+                ? "size-1.5 rounded-full bg-green-400"
+                : "size-1.5 rounded-full bg-muted-foreground"
+            }
+          />
+          {caseData.messageSent ? "Yes" : "No"}
+        </span>
+        {messageSentAt && (
+          <span className="text-xs text-muted-foreground">{messageSentAt}</span>
+        )}
+        <div className="ml-auto">
+          <Button
+            size="sm"
+            onClick={handleSendMessage}
+            disabled={caseData.messageSent || sending}
+          >
+            {sending ? "Sending…" : "Send Message"}
+          </Button>
+        </div>
+      </div>
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <dl className="divide-y divide-border">
