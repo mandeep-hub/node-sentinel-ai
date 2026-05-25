@@ -63,12 +63,6 @@ function randomItem<T>(array: readonly T[]): T {
 }
 
 function generateFiatAmount() {
-  const isSuspicious = Math.random() < 0.05;
-
-  if (isSuspicious) {
-    return Math.floor(Math.random() * 40000) + 10000;
-  }
-
   return Math.floor(Math.random() * 5000) + 1000;
 }
 
@@ -142,7 +136,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
   let spendAmount = Number((Math.random() * maxSpendable + 1).toFixed(2));
 
-  const generateLargeTransaction = Math.random() < 0.05;
+  const generateLargeTransaction = Math.random() < 0.25;
 
   if (generateLargeTransaction) {
     if (cryptoCurrencies.includes(currencyCode as keyof PriceCache)) {
@@ -169,7 +163,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
     const amountInUsd = amount;
 
-    const isSuspicious = amountInUsd >= 10000 || generateLargeTransaction;
+    const isSuspicious = amountInUsd >= 10000;
 
     status = isSuspicious ? "flagged" : randomItem(statuses);
 
@@ -214,7 +208,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
     const amountInUsd = amount;
 
-    const isSuspicious = amountInUsd >= 10000 || generateLargeTransaction;
+    const isSuspicious = amountInUsd >= 10000;
 
     status = isSuspicious ? "flagged" : randomItem(statuses);
 
@@ -250,7 +244,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
     const amountInUsd = amount;
 
-    const isSuspicious = amountInUsd >= 10000 || generateLargeTransaction;
+    const isSuspicious = amountInUsd >= 10000;
 
     status = isSuspicious ? "flagged" : randomItem(statuses);
 
@@ -283,7 +277,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 
   const amountInUsd = amount;
 
-  const isSuspicious = amountInUsd >= 10000 || generateLargeTransaction;
+  const isSuspicious = amountInUsd >= 10000;
 
   status = isSuspicious ? "flagged" : randomItem(statuses);
 
@@ -309,7 +303,7 @@ export async function generateTransaction(): Promise<UnsavedTransaction> {
 }
 
 export async function generateTransactions(
-  num = 5,
+  num = 20,
 ): Promise<UnsavedTransaction[]> {
   const transactions: UnsavedTransaction[] = [];
 
