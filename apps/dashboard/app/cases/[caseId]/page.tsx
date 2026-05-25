@@ -22,6 +22,8 @@ type CaseData = {
   assignedEmail: string | null;
   messageSent: boolean;
   messageSentAt: string | null;
+  escalated: boolean;
+  escalatedAt: string | null;
 };
 
 export default function CaseDetailPage({
@@ -88,9 +90,57 @@ export default function CaseDetailPage({
         )}
 
         {state === "found" && caseData && (
-          <CaseDetails caseData={caseData} setCaseData={setCaseData} />
+          <>
+            <EscalateBar caseData={caseData} onUpdate={setCaseData} />
+            <CaseDetails caseData={caseData} setCaseData={setCaseData} />
+          </>
         )}
       </div>
+    </div>
+  );
+}
+
+function EscalateBar({
+  caseData,
+  onUpdate,
+}: {
+  caseData: CaseData;
+  onUpdate: (data: CaseData) => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const escalated = caseData.escalated;
+  const escalatedAt = caseData.escalatedAt
+    ? new Date(caseData.escalatedAt).toLocaleString()
+    : null;
+
+  const handleEscalate = async () => {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/cases/${caseData.caseId}/escalate`, {
+        method: "PATCH",
+      });
+      if (!res.ok) return;
+      const updated = (await res.json()) as CaseData;
+      onUpdate(updated);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="mb-6 flex items-center gap-3">
+      <Button
+        variant="destructive"
+        onClick={handleEscalate}
+        disabled={escalated || submitting}
+      >
+        {escalated ? "Case Escalated" : submitting ? "Escalating…" : "Escalate Case"}
+      </Button>
+      {escalated && escalatedAt && (
+        <span className="text-sm text-muted-foreground">
+          Escalated at {escalatedAt}
+        </span>
+      )}
     </div>
   );
 }
