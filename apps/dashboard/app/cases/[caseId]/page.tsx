@@ -131,7 +131,6 @@ function CaseDetails({
     <>
       <div className="mb-4 flex items-center gap-3">
         <h1 className="text-2xl font-semibold text-foreground">Case Details</h1>
-        <StatusBadge status={caseData.status} />
       </div>
 
       <div className="mb-4 flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-4">
