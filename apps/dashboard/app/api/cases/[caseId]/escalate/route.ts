@@ -13,6 +13,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
 
+    if (existing.escalated) {
+      return NextResponse.json(existing);
+    }
+
     const updated = await prisma.case.update({
       where: { caseId },
       data: { escalated: true, escalatedAt: new Date() },

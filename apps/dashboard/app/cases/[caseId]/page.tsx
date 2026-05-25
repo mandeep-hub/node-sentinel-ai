@@ -152,10 +152,7 @@ function CaseDetails({ caseData }: { caseData: CaseData }) {
 
   return (
     <>
-      <div className="mb-4 flex items-center gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">Case Details</h1>
-        <StatusBadge status={caseData.status} />
-      </div>
+      <h1 className="mb-4 text-2xl font-semibold text-foreground">Case Details</h1>
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <dl className="divide-y divide-border">
