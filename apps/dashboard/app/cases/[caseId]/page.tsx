@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +25,12 @@ type CaseData = {
   messageSentAt: string | null;
   escalated: boolean;
   escalatedAt: string | null;
+  resolvedAt: string | null;
+  autoAssignOnResolve: boolean;
+  notes: string | null;
 };
+
+type NoteEntry = { text: string; savedAt: string };
 
 export default function CaseDetailPage({
   params,
@@ -93,6 +99,8 @@ export default function CaseDetailPage({
           <>
             <EscalateBar caseData={caseData} onUpdate={setCaseData} />
             <CaseDetails caseData={caseData} setCaseData={setCaseData} />
+            <NotesSection caseData={caseData} onUpdate={setCaseData} />
+            <ResolveSection caseData={caseData} onUpdate={setCaseData} />
           </>
         )}
       </div>
@@ -183,39 +191,7 @@ function CaseDetails({
         <h1 className="text-2xl font-semibold text-foreground">Case Details</h1>
       </div>
 
-      <div className="mb-4 flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-4">
-        <span className="text-sm font-medium text-muted-foreground">Message Customer</span>
-        <span
-          className={
-            caseData.messageSent
-              ? "inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400"
-              : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
-          }
-        >
-          <span
-            className={
-              caseData.messageSent
-                ? "size-1.5 rounded-full bg-green-400"
-                : "size-1.5 rounded-full bg-muted-foreground"
-            }
-          />
-          {caseData.messageSent ? "Yes" : "No"}
-        </span>
-        {messageSentAt && (
-          <span className="text-xs text-muted-foreground">{messageSentAt}</span>
-        )}
-        <div className="ml-auto">
-          <Button
-            size="sm"
-            onClick={handleSendMessage}
-            disabled={caseData.messageSent || sending}
-          >
-            {sending ? "Sending…" : "Send Message"}
-          </Button>
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="mb-4 overflow-hidden rounded-lg border border-border bg-card">
         <dl className="divide-y divide-border">
           <DetailRow label="Case ID">
             <span className="font-mono text-sm text-foreground">{caseData.caseId}</span>
@@ -272,7 +248,116 @@ function CaseDetails({
           </DetailRow>
         </dl>
       </div>
+
+      <div className="flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-4">
+        <span className="text-sm font-medium text-muted-foreground">Message Customer</span>
+        <span
+          className={
+            caseData.messageSent
+              ? "inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400"
+              : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+          }
+        >
+          <span
+            className={
+              caseData.messageSent
+                ? "size-1.5 rounded-full bg-green-400"
+                : "size-1.5 rounded-full bg-muted-foreground"
+            }
+          />
+          {caseData.messageSent ? "Yes" : "No"}
+        </span>
+        {messageSentAt && (
+          <span className="text-xs text-muted-foreground">{messageSentAt}</span>
+        )}
+        <div className="ml-auto">
+          <Button
+            size="sm"
+            onClick={handleSendMessage}
+            disabled={caseData.messageSent || sending}
+          >
+            {sending ? "Sending…" : "Send Message"}
+          </Button>
+        </div>
+      </div>
     </>
+  );
+}
+
+function NotesSection({
+  caseData,
+  onUpdate,
+}: {
+  caseData: CaseData;
+  onUpdate: (data: CaseData) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const notes: NoteEntry[] = (() => {
+    if (!caseData.notes) return [];
+    try {
+      const parsed = JSON.parse(caseData.notes);
+      return Array.isArray(parsed) ? (parsed as NoteEntry[]) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const handleSave = async () => {
+    const text = draft.trim();
+    if (!text) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/cases/${caseData.caseId}/notes`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: text }),
+      });
+      if (!res.ok) return;
+      const updated = (await res.json()) as CaseData;
+      onUpdate(updated);
+      setDraft("");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sorted = [...notes].sort(
+    (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime(),
+  );
+
+  return (
+    <div className="mt-6 rounded-lg border border-border bg-card px-6 py-5">
+      <label className="mb-2 block text-sm font-medium text-foreground">Notes</label>
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        className="min-h-24 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+        placeholder="Add a note…"
+      />
+      <div className="mt-3">
+        <Button onClick={handleSave} disabled={saving || !draft.trim()}>
+          {saving ? "Saving…" : "Save Note"}
+        </Button>
+      </div>
+
+      {sorted.length > 0 && (
+        <ul className="mt-5 space-y-3">
+          {sorted.map((note, idx) => (
+            <li
+              key={`${note.savedAt}-${idx}`}
+              className="rounded-md border border-border bg-background px-4 py-3"
+            >
+              <p className="whitespace-pre-wrap text-sm text-foreground">{note.text}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {new Date(note.savedAt).toLocaleString()}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -318,6 +403,130 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+function ResolveSection({
+  caseData,
+  onUpdate,
+}: {
+  caseData: CaseData;
+  onUpdate: (data: CaseData) => void;
+}) {
+  const router = useRouter();
+  const [resolving, setResolving] = useState(false);
+  const [savingAutoAssign, setSavingAutoAssign] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+
+  const resolved = caseData.status === "CLOSED";
+  const resolvedAt = caseData.resolvedAt
+    ? new Date(caseData.resolvedAt).toLocaleString()
+    : null;
+
+  const handleToggleAutoAssign = async (checked: boolean) => {
+    setSavingAutoAssign(true);
+    try {
+      const res = await fetch(`/api/cases/${caseData.caseId}/auto-assign`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoAssignOnResolve: checked }),
+      });
+      if (!res.ok) return;
+      const updated = (await res.json()) as CaseData;
+      onUpdate(updated);
+    } finally {
+      setSavingAutoAssign(false);
+    }
+  };
+
+  const handleResolve = async () => {
+    setResolving(true);
+    try {
+      const res = await fetch(`/api/cases/${caseData.caseId}/resolve`, {
+        method: "PATCH",
+      });
+      if (!res.ok) return;
+      const updated = (await res.json()) as CaseData;
+      onUpdate(updated);
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const handleGetNewCase = async () => {
+    setAssigning(true);
+    setAssignError(null);
+    try {
+      const res = await fetch(`/api/cases/assign`, { method: "POST" });
+      if (!res.ok) {
+        setAssignError("Failed to assign a new case.");
+        return;
+      }
+      const data = (await res.json()) as {
+        alreadyAssigned?: boolean;
+        noCases?: boolean;
+        case: CaseData | null;
+      };
+      if (data.noCases || !data.case) {
+        setAssignError("No open cases available.");
+        return;
+      }
+      router.push(`/cases/${data.case.caseId}`);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 rounded-lg border border-border bg-card px-6 py-5">
+      <h2 className="mb-4 text-lg font-semibold text-foreground">Resolve Case</h2>
+
+      <label className="mb-4 flex items-center gap-2 text-sm text-foreground">
+        <input
+          type="checkbox"
+          className="size-4 cursor-pointer rounded border-border bg-background accent-primary disabled:cursor-not-allowed"
+          checked={caseData.autoAssignOnResolve}
+          disabled={resolved || savingAutoAssign}
+          onChange={(e) => handleToggleAutoAssign(e.target.checked)}
+        />
+        Auto-assign new case after resolving
+      </label>
+
+      {!resolved && (
+        <Button onClick={handleResolve} disabled={resolving}>
+          {resolving ? "Resolving…" : "Resolve Case"}
+        </Button>
+      )}
+
+      {resolved && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Button disabled>Case Resolved</Button>
+            {resolvedAt && (
+              <span className="text-sm text-muted-foreground">
+                Resolved at {resolvedAt}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" asChild>
+              <Link href="/transactions">← Back to Transactions</Link>
+            </Button>
+            {caseData.autoAssignOnResolve && (
+              <Button onClick={handleGetNewCase} disabled={assigning}>
+                {assigning ? "Assigning…" : "Get New Case"}
+              </Button>
+            )}
+          </div>
+
+          {assignError && (
+            <p className="text-sm text-destructive">{assignError}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
   if (status === "OPEN") {
     return (
@@ -332,6 +541,14 @@ function StatusBadge({ status }: { status: string }) {
       <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
         <span className="size-1.5 rounded-full bg-blue-400" />
         IN_REVIEW
+      </span>
+    );
+  }
+  if (status === "CLOSED") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
+        <span className="size-1.5 rounded-full bg-green-400" />
+        CLOSED
       </span>
     );
   }
