@@ -24,6 +24,8 @@ type CaseData = {
   messageSentAt: string | null;
   escalated: boolean;
   escalatedAt: string | null;
+  riskScore: number;
+  riskBand: string | null;
 };
 
 export default function CaseDetailPage({
@@ -33,9 +35,9 @@ export default function CaseDetailPage({
 }) {
   const { caseId } = use(params);
   const [caseData, setCaseData] = useState<CaseData | null>(null);
-  const [state, setState] = useState<"loading" | "found" | "not-found" | "error">(
-    "loading",
-  );
+  const [state, setState] = useState<
+    "loading" | "found" | "not-found" | "error"
+  >("loading");
 
   useEffect(() => {
     let cancelled = false;
@@ -85,7 +87,9 @@ export default function CaseDetailPage({
 
         {state === "error" && (
           <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
-            <p className="text-sm text-muted-foreground">Failed to load case.</p>
+            <p className="text-sm text-muted-foreground">
+              Failed to load case.
+            </p>
           </div>
         )}
 
@@ -134,7 +138,11 @@ function EscalateBar({
         onClick={handleEscalate}
         disabled={escalated || submitting}
       >
-        {escalated ? "Case Escalated" : submitting ? "Escalating…" : "Escalate Case"}
+        {escalated
+          ? "Case Escalated"
+          : submitting
+            ? "Escalating…"
+            : "Escalate Case"}
       </Button>
       {escalated && escalatedAt && (
         <span className="text-sm text-muted-foreground">
@@ -184,7 +192,9 @@ function CaseDetails({
       </div>
 
       <div className="mb-4 flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-4">
-        <span className="text-sm font-medium text-muted-foreground">Message Customer</span>
+        <span className="text-sm font-medium text-muted-foreground">
+          Message Customer
+        </span>
         <span
           className={
             caseData.messageSent
@@ -218,7 +228,19 @@ function CaseDetails({
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <dl className="divide-y divide-border">
           <DetailRow label="Case ID">
-            <span className="font-mono text-sm text-foreground">{caseData.caseId}</span>
+            <span className="font-mono text-sm text-foreground">
+              {caseData.caseId}
+            </span>
+          </DetailRow>
+          <DetailRow label="Risk Score">
+            <span className="font-mono text-sm text-foreground">
+              {caseData.riskScore}
+            </span>
+          </DetailRow>
+          <DetailRow label="Risk Band">
+            <span className="font-mono text-sm text-foreground">
+              {caseData.riskBand}
+            </span>
           </DetailRow>
           <DetailRow label="User ID">
             <span className="text-sm text-foreground">{caseData.userId}</span>
@@ -233,10 +255,14 @@ function CaseDetails({
             </span>
           </DetailRow>
           <DetailRow label="Transaction ID">
-            <span className="font-mono text-sm text-foreground">{caseData.transactionId}</span>
+            <span className="font-mono text-sm text-foreground">
+              {caseData.transactionId}
+            </span>
           </DetailRow>
           <DetailRow label="Currency">
-            <span className="font-mono text-sm uppercase text-foreground">{caseData.currency}</span>
+            <span className="font-mono text-sm uppercase text-foreground">
+              {caseData.currency}
+            </span>
           </DetailRow>
           <DetailRow label="Type">
             <TypeBadge type={caseData.transactionType} />
@@ -249,17 +275,23 @@ function CaseDetails({
           </DetailRow>
           <DetailRow label="Country">
             <span className="text-sm text-foreground">
-              {caseData.country ?? <span className="text-muted-foreground">—</span>}
+              {caseData.country ?? (
+                <span className="text-muted-foreground">—</span>
+              )}
             </span>
           </DetailRow>
           <DetailRow label="Profession">
             <span className="text-sm text-foreground">
-              {caseData.profession ?? <span className="text-muted-foreground">—</span>}
+              {caseData.profession ?? (
+                <span className="text-muted-foreground">—</span>
+              )}
             </span>
           </DetailRow>
           <DetailRow label="Assigned To">
             <span className="text-sm text-foreground">
-              {caseData.assignedTo ?? <span className="text-muted-foreground">Unassigned</span>}
+              {caseData.assignedTo ?? (
+                <span className="text-muted-foreground">Unassigned</span>
+              )}
             </span>
           </DetailRow>
           <DetailRow label="Assigned At">
@@ -276,10 +308,18 @@ function CaseDetails({
   );
 }
 
-function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+function DetailRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex items-center gap-6 px-6 py-4">
-      <dt className="w-36 shrink-0 text-sm font-medium text-muted-foreground">{label}</dt>
+      <dt className="w-36 shrink-0 text-sm font-medium text-muted-foreground">
+        {label}
+      </dt>
       <dd>{children}</dd>
     </div>
   );

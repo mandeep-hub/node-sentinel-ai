@@ -1,6 +1,6 @@
 import { prisma } from "./prisma";
-
 import { convertCurrency } from "./exchangeRateService";
+import { calculateRiskScore } from "@/lib/riskScoreService";
 
 type Transaction = {
   id: string;
@@ -77,7 +77,7 @@ export async function createCaseForSuspiciousTransaction(
     ? "Debit transaction exceeded 10k USD threshold"
     : "Credit transaction exceeded 10k USD threshold";
 
-  return prisma.case.create({
+  const newCase = await prisma.case.create({
     data: {
       caseId: `CASE-${Date.now()}`,
 
@@ -99,5 +99,24 @@ export async function createCaseForSuspiciousTransaction(
 
       profession: transaction.profession,
     },
+  });
+
+  const userCases = await prisma.case.findMany({
+    where: { userId: newCase.userId },
+    select: { status: true, riskScore: true },
+  });
+
+  const { riskScore, riskBand } = calculateRiskScore(
+    newCase.country ?? "",
+    newCase.profession ?? "",
+    userCases.map((uc) => ({
+      status: uc.status as "OPEN" | "IN_REVIEW" | "CLOSED",
+      riskScore: uc.riskScore ?? 0,
+    })),
+  );
+
+  return prisma.case.update({
+    where: { id: newCase.id },
+    data: { riskScore, riskBand },
   });
 }
