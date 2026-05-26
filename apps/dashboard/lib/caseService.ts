@@ -9,6 +9,8 @@ type Transaction = {
 
   kind: string;
 
+  status?: string;
+
   debitCurrencyCode?: string;
 
   debitAmount?: number;
@@ -25,6 +27,10 @@ type Transaction = {
 export async function createCaseForSuspiciousTransaction(
   transaction: Transaction,
 ) {
+  if (transaction.status !== "flagged") {
+    return null;
+  }
+
   const debitAmount = Number(transaction.debitAmount || 0);
 
   const creditAmount = Number(transaction.creditAmount || 0);
