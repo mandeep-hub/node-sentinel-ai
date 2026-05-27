@@ -39,11 +39,13 @@ Both schemas use the same `DATABASE_URL` (one Postgres instance, two independent
 Browser → Next.js middleware (Auth0) → /app/api/* → (engine HTTP for transactions) OR (dashboard Prisma for cases)
                                                             ↓                                    ↓
                                               transaction-engine :5000 → Postgres   →   same Postgres (separate schema)
+                                                            │
+                                                            └── POST /api/cases → dashboard (webhook per transaction)
 ```
 
 Two read paths:
 - **Transactions, balances, FX** — dashboard never reads these from Postgres directly. It calls the engine over HTTP via `apps/dashboard/lib/transactionPoller.ts` / `transactionApi.ts`.
-- **Cases** — the dashboard owns the `Case` model and reads/writes it via its own Prisma client (`apps/dashboard/lib/prisma.ts`, generated to `apps/dashboard/generated/prisma`). Cases are produced by the dashboard's fraud scanner, not the engine.
+- **Cases** — the dashboard owns the `Case` model and reads/writes it via its own Prisma client (`apps/dashboard/lib/prisma.ts`, generated to `apps/dashboard/generated/prisma`).
 
 Auth0 wraps every request via `apps/dashboard/proxy.ts` (the Next.js middleware file); unauthenticated users are redirected to `/auth/login`.
 
@@ -65,10 +67,12 @@ Routers:
 
 Critical service contract: **all transaction writes must go through `services/transactionService.ts::createTransaction`**, which wraps `transaction.create` + `updateBalances` in a single `prisma.$transaction`. Bypassing it (e.g. writing via `transactionStore` directly) will desync balances.
 
+`createTransaction` also fires a `POST` to `$DASHBOARD_URL/api/cases` for every transaction inside the same DB transaction. This is the primary path for case creation; the dashboard fraud scan job is a secondary polling fallback. Both paths are deduplicated by `Case.transactionId`.
+
 Other services:
 - `fxService.ts` — live crypto prices, cached in memory
 - `exchangeRateService.ts` — fiat conversions via CurrencyFreaks
-- `transactionGenerator.ts` — assembles randomized `UnsavedTransaction` objects
+- `transactionGenerator.ts` — assembles randomized `UnsavedTransaction` objects; sets `status = "flagged"` for any transaction that meets suspicious criteria at generation time
 - `balanceService.ts` — applies a transaction's debit/credit deltas to `Balance` rows
 
 ### Dashboard (`apps/dashboard`, port 3000)
@@ -77,11 +81,22 @@ Next.js 16 App Router. shadcn/ui components are installed locally under `apps/da
 
 API routes under `app/api/`:
 - `transactions/` — proxies the engine
-- `cases/summary/` — reads from the dashboard's own Prisma
+- `cases/` — GET returns OPEN cases; POST calls `caseService.createCaseForSuspiciousTransaction` (called by the engine webhook)
+- `cases/[caseId]/` — GET a single case by its `caseId` string
+- `cases/assign/` — POST assigns a random OPEN case to the authenticated analyst (Auth0 session email); sets status to `IN_REVIEW`
+- `cases/summary/` — reads aggregate stats from the dashboard's own Prisma
 - `scan/` — manual trigger for `fraudScanner.scanTransactions()`
+- `ai-summary/` — POST calls `aiSummaryService.generateAiSummary` (Gemini)
 - `auth/` — Auth0
 
-Background work: `apps/dashboard/jobs/fraudScanJob.ts` runs a 10 s `setInterval` that fetches transactions from the engine and, for any matching the rules in `lib/fraudScanner.ts`, inserts a `Case` row via `lib/caseService.ts`. Cases are deduped by the `Case.transactionId` unique constraint.
+Background work: `apps/dashboard/jobs/fraudScanJob.ts` runs a 10 s `setInterval` that fetches transactions from the engine and calls `lib/caseService.ts` for each. Cases are deduped by the `Case.transactionId` unique constraint.
+
+Key lib files:
+- `caseService.ts` — `createCaseForSuspiciousTransaction`: only acts on `status === "flagged"` transactions where the debit or credit amount converts to ≥ $10,000 USD. Calls `generateAiSummary` (Gemini, falls back to a static string) then `calculateRiskScore`, and saves both to the new `Case`.
+- `aiSummaryService.ts` — wraps Google Gemini (`@google/genai`) to produce 2–3 sentence AML narrative summaries.
+- `riskScoreService.ts` — `calculateRiskScore(country, profession, cases[])` returns `{ riskScore, riskBand }`. Bands: `LOW / MEDIUM / HIGH / CRITICAL / RESTRICTED`. `RESTRICTED` is returned immediately for sanctioned countries (IR, KP). Score is based on country risk tier, profession, open/in-review case counts, round-amount patterns, and near-threshold structuring signals.
+- `exchangeRateService.ts` (dashboard) — fiat conversion used by `caseService` to normalize amounts to USD for threshold checks.
+- `fraudScanner.ts` — thin orchestrator: fetches transactions, calls `createCaseForSuspiciousTransaction` for each.
 
 ### Database (Prisma + Postgres)
 
@@ -91,24 +106,27 @@ Two schemas in one Postgres instance, owned by different apps:
 - `User` — uuid id, name, email
 - `Currency` — `code` PK (e.g. `BTC`, `USD`), `kind`, `decimals`
 - `Balance` — composite PK `(userId, currencyCode)`, `Decimal(38,18)` amount
-- `Transaction` — uuid id, `kind`, optional `creditCurrencyCode`/`creditAmount` and `debitCurrencyCode`/`debitAmount` (both nullable so deposits, withdrawals, and exchanges share one shape), `status`, `flaggedAt`, `flagReason`, optional `country` / `profession` compliance signals, `metadata` JSON
+- `Transaction` — uuid id, `kind`, optional `creditCurrencyCode`/`creditAmount` and `debitCurrencyCode`/`debitAmount` (both nullable so deposits, withdrawals, and exchanges share one shape), `status` (`settled`/`pending`/`flagged`/`reversed`), `flaggedAt`, `flagReason`, optional `country` / `profession` compliance signals, `metadata` JSON
 
 A transaction can have either or both sides set — `balanceService` interprets whichever side(s) are populated.
 
 **Dashboard schema** (`apps/dashboard/prisma/schema.prisma`):
-- `Case` — uuid id, unique `caseId`, unique `transactionId`, `userId`, `amount` (`Decimal(38,18)`), `currency`, `transactionType`, `status`, `reason`, `createdAt`
+- `Case` — uuid id, unique `caseId` (`CASE-<timestamp>`), unique `transactionId`, `userId`, `amount` (`Decimal(38,18)`), `currency`, `transactionType`, `status` (`OPEN`/`IN_REVIEW`/`ESCALATED`/`CLOSED`), `reason`, `aiSummary`, `country`, `profession`, `riskScore` (int), `riskBand` (string), `assignedTo`, `assignedEmail`, `assignedAt`, `escalated`, `escalatedAt`, `messageSent`, `messageSentAt`, `notes`, `resolvedAt`, `autoAssignOnResolve`, `createdAt`
 
-There is no foreign key between `Case.transactionId` and the engine's `Transaction.id` — they live in separate Prisma schemas. The dashboard treats the transaction id as an opaque string echoed back from the engine API.
+There is no foreign key between `Case.transactionId` and the engine's `Transaction.id` — they live in separate Prisma schemas.
 
 ## Environment variables
 
-**`apps/dashboard/.env.local`** (Auth0):
+**`apps/dashboard/.env.local`**:
 ```
 AUTH0_SECRET=       # openssl rand -hex 32
 AUTH0_DOMAIN=       # your-tenant.us.auth0.com
 AUTH0_CLIENT_ID=
 AUTH0_CLIENT_SECRET=
 APP_BASE_URL=http://localhost:3000
+GEMINI_API_KEY=
+GEMINI_MODEL=       # optional, defaults to gemini-2.5-flash
+DATABASE_URL=
 ```
 
 **`apps/transaction-engine/.env`**:
@@ -116,4 +134,5 @@ APP_BASE_URL=http://localhost:3000
 DATABASE_URL=
 COINGECKO_API_KEY=
 CURRENCY_FREAKS_API_KEY=
+DASHBOARD_URL=      # required — createTransaction POSTs /api/cases to this URL
 ```
