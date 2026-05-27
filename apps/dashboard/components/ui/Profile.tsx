@@ -5,9 +5,12 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 function getInitials(name?: string | null, email?: string | null): string {
   if (name) {
     const parts = name.trim().split(" ");
+    const first = parts[0];
+    const second = parts[1];
+
     return parts.length >= 2
-      ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-      : parts[0].slice(0, 2).toUpperCase();
+      ? `${first![0]}${second![0]}`.toUpperCase()
+      : first!.slice(0, 2).toUpperCase();
   }
   if (email) return email.slice(0, 2).toUpperCase();
   return "U";

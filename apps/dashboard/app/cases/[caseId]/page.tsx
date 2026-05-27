@@ -26,6 +26,7 @@ type CaseData = {
   escalatedAt: string | null;
   riskScore: number;
   riskBand: string | null;
+  notes: string | null;
 };
 
 export default function CaseDetailPage({
@@ -225,7 +226,7 @@ function CaseDetails({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="mb-4 overflow-hidden rounded-lg border border-border bg-card">
         <dl className="divide-y divide-border">
           <DetailRow label="Case ID">
             <span className="font-mono text-sm text-foreground">
@@ -304,7 +305,106 @@ function CaseDetails({
           </DetailRow>
         </dl>
       </div>
+
+      <NotesSection caseData={caseData} setCaseData={setCaseData} />
     </>
+  );
+}
+
+type NoteEntry = { text: string; savedAt: string };
+
+function parseNotes(raw: string | null): NoteEntry[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (e): e is NoteEntry =>
+          e &&
+          typeof e === "object" &&
+          typeof e.text === "string" &&
+          typeof e.savedAt === "string",
+      );
+    }
+  } catch {
+    // fall through to plain-string handling
+  }
+  return [{ text: raw, savedAt: "" }];
+}
+
+function NotesSection({
+  caseData,
+  setCaseData,
+}: {
+  caseData: CaseData;
+  setCaseData: (data: CaseData) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+
+  const entries = parseNotes(caseData.notes);
+  const sorted = [...entries].sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+
+  const handleSave = async () => {
+    const text = draft.trim();
+    if (!text) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/cases/${caseData.caseId}/notes`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: text }),
+      });
+      if (!res.ok) return;
+      const updated = (await res.json()) as CaseData;
+      setCaseData(updated);
+      setDraft("");
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mb-4 rounded-lg border border-border bg-card px-6 py-4">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-sm font-medium text-muted-foreground">Notes</span>
+        {showSaved && <span className="text-xs text-green-400">Saved</span>}
+      </div>
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        rows={4}
+        placeholder="Add a note about this case…"
+        className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+      />
+      <div className="mt-3">
+        <Button size="sm" onClick={handleSave} disabled={saving || !draft.trim()}>
+          {saving ? "Saving…" : "Save Note"}
+        </Button>
+      </div>
+      {sorted.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {sorted.map((entry, idx) => (
+            <div
+              key={`${entry.savedAt}-${idx}`}
+              className="rounded-md border border-border bg-background px-3 py-2"
+            >
+              <div className="text-xs text-muted-foreground">
+                {entry.savedAt
+                  ? new Date(entry.savedAt).toLocaleString()
+                  : "Previously saved"}
+              </div>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                {entry.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
