@@ -23,6 +23,7 @@ model Case {
   currency String
   transactionType String
   status String @default("open")
+  aiSummary String?
   reason String
   country    String?
   profession String?
