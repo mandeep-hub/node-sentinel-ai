@@ -27,12 +27,10 @@ model Case {
   reason String
   country    String?
   profession String?
-
   createdAt DateTime @default(now())
   assignedAt DateTime?
   assignedTo String?
   assignedEmail String?
-
   escalated Boolean @default(false)
   escalatedAt DateTime?
   messageSent Boolean @default(false)
@@ -40,4 +38,6 @@ model Case {
   notes String?
   resolvedAt DateTime?
   autoAssignOnResolve Boolean @default(false)
+  riskScore Int? @default(0)
+  riskBand String? @default("LOW")
 }

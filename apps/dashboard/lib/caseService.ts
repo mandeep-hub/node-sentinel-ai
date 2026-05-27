@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { generateAiSummary } from "./aiSummaryService";
-
 import { convertCurrency } from "./exchangeRateService";
+import { calculateRiskScore } from "@/lib/riskScoreService";
 
 type Transaction = {
   id: string;
@@ -9,6 +9,8 @@ type Transaction = {
   userId: string;
 
   kind: string;
+
+  status?: string;
 
   debitCurrencyCode?: string;
 
@@ -26,6 +28,10 @@ type Transaction = {
 export async function createCaseForSuspiciousTransaction(
   transaction: Transaction,
 ) {
+  if (transaction.status !== "flagged") {
+    return null;
+  }
+
   const debitAmount = Number(transaction.debitAmount || 0);
 
   const creditAmount = Number(transaction.creditAmount || 0);
@@ -86,7 +92,8 @@ export async function createCaseForSuspiciousTransaction(
   } catch (error) {
     console.warn("Gemini failed. Using fallback summary.", error);
   }
-  return prisma.case.create({
+
+  const newCase = await prisma.case.create({
     data: {
       caseId: `CASE-${Date.now()}`,
 
@@ -109,5 +116,33 @@ export async function createCaseForSuspiciousTransaction(
 
       profession: transaction.profession,
     },
+  });
+
+  const userCases = await prisma.case.findMany({
+    where: { userId: newCase.userId },
+    select: {
+      status: true,
+      riskScore: true,
+      amount: true,
+      createdAt: true,
+      transactionType: true,
+    },
+  });
+
+  const { riskScore, riskBand } = calculateRiskScore(
+    newCase.country ?? "",
+    newCase.profession ?? "",
+    userCases.map((uc) => ({
+      status: uc.status as "OPEN" | "IN_REVIEW" | "CLOSED",
+      riskScore: uc.riskScore ?? 0,
+      amount: uc.amount,
+      createdAt: uc.createdAt,
+      transactionType: uc.transactionType as "deposit" | "withdrawal" | "trade",
+    })),
+  );
+
+  return prisma.case.update({
+    where: { id: newCase.id },
+    data: { riskScore, riskBand },
   });
 }
