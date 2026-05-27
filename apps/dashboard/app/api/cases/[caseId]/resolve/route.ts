@@ -13,24 +13,20 @@ export async function PATCH(
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
 
-    if (existing.escalated) {
+    if (existing.status === "CLOSED") {
       return NextResponse.json(existing);
     }
 
     const updated = await prisma.case.update({
       where: { caseId },
-      data: {
-        escalated: true,
-        escalatedAt: new Date(),
-        status: "ESCALATED",
-      },
+      data: { status: "CLOSED", resolvedAt: new Date() },
     });
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Failed to escalate case:", error);
+    console.error("Failed to resolve case:", error);
     return NextResponse.json(
-      { error: "Failed to escalate case" },
+      { error: "Failed to resolve case" },
       { status: 500 },
     );
   }

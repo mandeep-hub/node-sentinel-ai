@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -27,11 +28,34 @@ type CaseData = {
   messageSentAt: string | null;
   escalated: boolean;
   escalatedAt: string | null;
+  resolvedAt: string | null;
+  autoAssignOnResolve: boolean;
   riskScore: number;
   riskBand: string | null;
   notes: string | null;
   resolvedAt: string | null;
 };
+
+type NoteEntry = { text: string; savedAt: string };
+
+function parseNotes(raw: string | null): NoteEntry[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (e): e is NoteEntry =>
+          e &&
+          typeof e === "object" &&
+          typeof e.text === "string" &&
+          typeof e.savedAt === "string",
+      );
+    }
+  } catch {
+    // fall through to plain-string handling
+  }
+  return [{ text: raw, savedAt: "" }];
+}
 
 export default function CaseDetailPage({
   params,
@@ -143,6 +167,8 @@ export default function CaseDetailPage({
           <>
             <EscalateBar caseData={caseData} onUpdate={setCaseData} />
             <CaseDetails caseData={caseData} setCaseData={setCaseData} />
+            <NotesSection caseData={caseData} setCaseData={setCaseData} />
+            <ResolveSection caseData={caseData} onUpdate={setCaseData} />
           </>
         )}
       </div>
@@ -652,6 +678,134 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+function ResolveSection({
+  caseData,
+  onUpdate,
+}: {
+  caseData: CaseData;
+  onUpdate: (data: CaseData) => void;
+}) {
+  const router = useRouter();
+  const [resolving, setResolving] = useState(false);
+  const [savingAutoAssign, setSavingAutoAssign] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+
+  const resolved = caseData.status === "CLOSED";
+  const resolvedAt = caseData.resolvedAt
+    ? new Date(caseData.resolvedAt).toLocaleString()
+    : null;
+
+  const handleToggleAutoAssign = async (checked: boolean) => {
+    setSavingAutoAssign(true);
+    try {
+      const res = await fetch(`/api/cases/${caseData.caseId}/auto-assign`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoAssignOnResolve: checked }),
+      });
+      if (!res.ok) return;
+      const updated = (await res.json()) as CaseData;
+      onUpdate(updated);
+    } finally {
+      setSavingAutoAssign(false);
+    }
+  };
+
+  const handleResolve = async () => {
+    setResolving(true);
+    try {
+      const res = await fetch(`/api/cases/${caseData.caseId}/resolve`, {
+        method: "PATCH",
+      });
+      if (!res.ok) return;
+      const updated = (await res.json()) as CaseData;
+      onUpdate(updated);
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const handleGetNewCase = async () => {
+    setAssigning(true);
+    setAssignError(null);
+    try {
+      const res = await fetch(`/api/cases/assign`, { method: "POST" });
+      if (!res.ok) {
+        setAssignError("Failed to assign a new case.");
+        return;
+      }
+      const data = (await res.json()) as {
+        alreadyAssigned?: boolean;
+        noCases?: boolean;
+        case: CaseData | null;
+      };
+      if (data.noCases || !data.case) {
+        setAssignError("No open cases available.");
+        return;
+      }
+      router.push(`/cases/${data.case.caseId}`);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 rounded-lg border border-border bg-card px-6 py-5">
+      <h2 className="mb-4 text-lg font-semibold text-foreground">
+        Resolve Case
+      </h2>
+
+      <label className="mb-4 flex items-center gap-2 text-sm text-foreground">
+        <input
+          type="checkbox"
+          className="size-4 cursor-pointer rounded border-border bg-background accent-primary disabled:cursor-not-allowed"
+          checked={caseData.autoAssignOnResolve}
+          disabled={resolved || savingAutoAssign}
+          onChange={(e) => handleToggleAutoAssign(e.target.checked)}
+        />
+        Auto-assign new case after resolving
+      </label>
+
+      {!resolved && (
+        <Button onClick={handleResolve} disabled={resolving}>
+          {resolving ? "Resolving…" : "Resolve Case"}
+        </Button>
+      )}
+
+      {resolved && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Button disabled>Case Resolved</Button>
+            {resolvedAt && (
+              <span className="text-sm text-muted-foreground">
+                Resolved at {resolvedAt}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" asChild>
+              <Link href="/transactions">← Back to Transactions</Link>
+            </Button>
+            {caseData.autoAssignOnResolve && (
+              <Button onClick={handleGetNewCase} disabled={assigning}>
+                {assigning ? "Assigning…" : "Get New Case"}
+              </Button>
+            )}
+          </div>
+
+          {assignError && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {assignError}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
   if (status === "OPEN") {
     return (
@@ -666,6 +820,22 @@ function StatusBadge({ status }: { status: string }) {
       <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
         <span className="size-1.5 rounded-full bg-blue-400" />
         IN_REVIEW
+      </span>
+    );
+  }
+  if (status === "ESCALATED") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
+        <span className="size-1.5 rounded-full bg-destructive" />
+        ESCALATED
+      </span>
+    );
+  }
+  if (status === "CLOSED") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
+        <span className="size-1.5 rounded-full bg-green-400" />
+        CLOSED
       </span>
     );
   }
