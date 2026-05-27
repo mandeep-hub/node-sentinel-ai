@@ -1,0 +1,2 @@
+echo "Attempting to build Dashboard application"
+cd apps/dashboard; yarn build

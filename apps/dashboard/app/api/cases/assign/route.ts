@@ -24,7 +24,7 @@ export async function POST() {
 
   const randomCase = openCases[Math.floor(Math.random() * openCases.length)];
   const assigned = await prisma.case.update({
-    where: { id: randomCase.id },
+    where: { id: randomCase!.id },
     data: {
       assignedTo: analystEmail,
       assignedEmail: analystEmail,
