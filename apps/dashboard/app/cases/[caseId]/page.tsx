@@ -33,6 +33,7 @@ type CaseData = {
   riskScore: number;
   riskBand: string | null;
   notes: string | null;
+  resolvedAt: string | null;
 };
 
 type NoteEntry = { text: string; savedAt: string };
@@ -393,8 +394,156 @@ function CaseDetails({
           </DetailRow>
         </dl>
       </div>
+
+      <NotesSection caseData={caseData} setCaseData={setCaseData} />
+      <AuditLog caseData={caseData} />
     </>
   );
+}
+
+type AuditEvent = {
+  key: string;
+  timestamp: string;
+  label: string;
+  detail?: string;
+  color: "blue" | "green" | "red" | "primary" | "muted";
+};
+
+const dotClasses: Record<AuditEvent["color"], string> = {
+  blue: "bg-blue-400 ring-blue-400/30",
+  green: "bg-green-400 ring-green-400/30",
+  red: "bg-red-400 ring-red-400/30",
+  primary: "bg-primary ring-primary/30",
+  muted: "bg-muted-foreground ring-muted-foreground/30",
+};
+
+function buildAuditEvents(caseData: CaseData): AuditEvent[] {
+  const events: AuditEvent[] = [];
+
+  if (caseData.createdAt) {
+    events.push({
+      key: "created",
+      timestamp: caseData.createdAt,
+      label: "Case created",
+      color: "blue",
+    });
+    events.push({
+      key: "risk",
+      timestamp: caseData.createdAt,
+      label: "Risk score calculated",
+      detail: `Score ${caseData.riskScore}${caseData.riskBand ? ` · Band ${caseData.riskBand}` : ""}`,
+      color: "blue",
+    });
+  }
+
+  if (caseData.assignedAt) {
+    events.push({
+      key: "assigned",
+      timestamp: caseData.assignedAt,
+      label: "Analyst assigned",
+      detail: caseData.assignedEmail ?? caseData.assignedTo ?? undefined,
+      color: "green",
+    });
+  }
+
+  if (caseData.escalated && caseData.escalatedAt) {
+    events.push({
+      key: "escalated",
+      timestamp: caseData.escalatedAt,
+      label: "Case escalated",
+      color: "red",
+    });
+  }
+
+  if (caseData.messageSent && caseData.messageSentAt) {
+    events.push({
+      key: "message",
+      timestamp: caseData.messageSentAt,
+      label: "Message sent to customer",
+      color: "primary",
+    });
+  }
+
+  for (const [idx, note] of parseNotes(caseData.notes).entries()) {
+    if (!note.savedAt) continue;
+    events.push({
+      key: `note-${idx}-${note.savedAt}`,
+      timestamp: note.savedAt,
+      label: "Note added",
+      detail: note.text,
+      color: "muted",
+    });
+  }
+
+  if (caseData.status === "CLOSED" && caseData.resolvedAt) {
+    events.push({
+      key: "resolved",
+      timestamp: caseData.resolvedAt,
+      label: "Case resolved",
+      color: "green",
+    });
+  }
+
+  return events.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+}
+
+function AuditLog({ caseData }: { caseData: CaseData }) {
+  const events = buildAuditEvents(caseData);
+
+  return (
+    <div className="mb-4 rounded-lg border border-border bg-card px-6 py-4">
+      <h2 className="mb-4 text-sm font-medium text-muted-foreground">
+        Audit Log
+      </h2>
+      {events.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No events yet.</p>
+      ) : (
+        <ol className="relative ml-2 space-y-5 border-l border-border pl-6">
+          {events.map((event) => (
+            <li key={event.key} className="relative">
+              <span
+                className={`absolute -left-[1.85rem] top-1.5 size-2.5 rounded-full ring-4 ${dotClasses[event.color]}`}
+              />
+              <div className="flex flex-wrap items-baseline gap-x-3">
+                <span className="text-sm font-medium text-foreground">
+                  {event.label}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(event.timestamp).toLocaleString()}
+                </span>
+              </div>
+              {event.detail && (
+                <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                  {event.detail}
+                </p>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+type NoteEntry = { text: string; savedAt: string };
+
+function parseNotes(raw: string | null): NoteEntry[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (e): e is NoteEntry =>
+          e &&
+          typeof e === "object" &&
+          typeof e.text === "string" &&
+          typeof e.savedAt === "string",
+      );
+    }
+  } catch {
+    // fall through to plain-string handling
+  }
+  return [{ text: raw, savedAt: "" }];
 }
 
 function NotesSection({
