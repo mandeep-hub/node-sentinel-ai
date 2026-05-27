@@ -551,6 +551,14 @@ function StatusBadge({ status }: { status: string }) {
       </span>
     );
   }
+  if (status === "CLOSED") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
+        <span className="size-1.5 rounded-full bg-green-400" />
+        CLOSED
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
       <span className="size-1.5 rounded-full bg-muted-foreground" />
