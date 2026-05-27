@@ -14,6 +14,9 @@ type CaseData = {
   transactionType: string;
   status: string;
   reason: string;
+  aiSummary?: string | null;
+
+  recommendedActions?: string | null;
   country: string | null;
   profession: string | null;
   createdAt: string;
@@ -55,7 +58,48 @@ export default function CaseDetailPage({
           return;
         }
         const data = (await res.json()) as CaseData;
+
+        const actions: string[] = [];
+
+        actions.push("- Contact customer");
+
+        actions.push("- Verify source of funds");
+
+        if (data.escalated) {
+          data.aiSummary =
+            (data.aiSummary ?? "") +
+            " The case has already been escalated for additional compliance investigation.";
+        }
+
+        if (
+          data.country === "KP" ||
+          data.country === "IR" ||
+          data.country === "RU"
+        ) {
+          actions.push(
+            "- Perform enhanced due diligence for high-risk country",
+          );
+        }
+
+        if (
+          data.profession?.toLowerCase().includes("crypto") ||
+          data.profession?.toLowerCase().includes("commodities")
+        ) {
+          actions.push("- Review business activity and transaction history");
+        }
+
+        if (
+          data.currency === "BTC" ||
+          data.currency === "ETH" ||
+          data.currency === "SOL"
+        ) {
+          actions.push("- Review crypto wallet activity");
+        }
+
+        data.recommendedActions = actions.join("\n");
+
         setCaseData(data);
+
         setState("found");
       })
       .catch(() => {
@@ -189,6 +233,24 @@ function CaseDetails({
 
   return (
     <>
+      <div className="mb-6 rounded-lg border border-border bg-card p-4">
+        <h2 className="mb-2 text-lg font-semibold text-foreground">
+          AI Summary
+        </h2>
+
+        <p className="whitespace-pre-line text-sm leading-7 text-foreground">
+          {caseData.aiSummary ?? "No AI summary available."}
+        </p>
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm font-medium text-yellow-500">
+            Recommended Next Steps
+          </summary>
+
+          <div className="mt-3 whitespace-pre-line rounded-md bg-muted p-3 text-sm text-foreground">
+            {caseData.recommendedActions ?? "No recommended actions available."}
+          </div>
+        </details>
+      </div>
       <div className="mb-4 flex items-center gap-3">
         <h1 className="text-2xl font-semibold text-foreground">Case Details</h1>
       </div>
@@ -470,7 +532,9 @@ function NotesSection({
   const [showSaved, setShowSaved] = useState(false);
 
   const entries = parseNotes(caseData.notes);
-  const sorted = [...entries].sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  const sorted = [...entries].sort((a, b) =>
+    b.savedAt.localeCompare(a.savedAt),
+  );
 
   const handleSave = async () => {
     const text = draft.trim();
@@ -507,7 +571,11 @@ function NotesSection({
         className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
       />
       <div className="mt-3">
-        <Button size="sm" onClick={handleSave} disabled={saving || !draft.trim()}>
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving || !draft.trim()}
+        >
           {saving ? "Saving…" : "Save Note"}
         </Button>
       </div>

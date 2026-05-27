@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { generateAiSummary } from "./aiSummaryService";
 import { convertCurrency } from "./exchangeRateService";
 import { calculateRiskScore } from "@/lib/riskScoreService";
 
@@ -26,6 +27,7 @@ type Transaction = {
 
 export async function createCaseForSuspiciousTransaction(
   transaction: Transaction,
+  rates: Record<string, string>,
 ) {
   if (transaction.status !== "flagged") {
     return null;
@@ -41,12 +43,12 @@ export async function createCaseForSuspiciousTransaction(
 
   const debitAmountInUsd =
     debitAmount > 0
-      ? await convertCurrency(debitAmount, debitCurrency, "USD")
+      ? convertCurrency(debitAmount, debitCurrency, "USD", rates)
       : 0;
 
   const creditAmountInUsd =
     creditAmount > 0
-      ? await convertCurrency(creditAmount, creditCurrency, "USD")
+      ? convertCurrency(creditAmount, creditCurrency, "USD", rates)
       : 0;
 
   const isDebitSuspicious = debitAmountInUsd >= 10000;
@@ -77,6 +79,21 @@ export async function createCaseForSuspiciousTransaction(
     ? "Debit transaction exceeded 10k USD threshold"
     : "Credit transaction exceeded 10k USD threshold";
 
+  let aiSummary = `A high-value ${transaction.kind} transaction involving ${caseCurrency} ${caseAmount} exceeded AML monitoring thresholds and requires additional compliance review.`;
+
+  try {
+    aiSummary = await generateAiSummary({
+      transactionType: transaction.kind,
+      currency: caseCurrency,
+      amount: caseAmount.toString(),
+      country: transaction.country || null,
+      profession: transaction.profession || null,
+      escalated: false,
+    });
+  } catch (error) {
+    console.warn("Gemini failed. Using fallback summary.", error);
+  }
+
   const newCase = await prisma.case.create({
     data: {
       caseId: `CASE-${Date.now()}`,
@@ -92,6 +109,7 @@ export async function createCaseForSuspiciousTransaction(
       transactionType: transaction.kind,
 
       status: "OPEN",
+      aiSummary,
 
       reason,
 
