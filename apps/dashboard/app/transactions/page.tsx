@@ -82,7 +82,15 @@ export default function TransactionsPage() {
   }, []);
 
   const scanTransactions = async () => {
-    await fetch("/api/scan");
+    try {
+      const response = await fetch("/api/scan");
+
+      if (!response.ok) {
+        console.error("Scan API failed");
+      }
+    } catch (error) {
+      console.error("Scan request failed:", error);
+    }
   };
 
   const fetchOpenCases = useCallback(async () => {
