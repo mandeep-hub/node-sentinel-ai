@@ -27,6 +27,7 @@ type Transaction = {
 
 export async function createCaseForSuspiciousTransaction(
   transaction: Transaction,
+  rates: Record<string, string>,
 ) {
   if (transaction.status !== "flagged") {
     return null;
@@ -42,12 +43,12 @@ export async function createCaseForSuspiciousTransaction(
 
   const debitAmountInUsd =
     debitAmount > 0
-      ? await convertCurrency(debitAmount, debitCurrency, "USD")
+      ? convertCurrency(debitAmount, debitCurrency, "USD", rates)
       : 0;
 
   const creditAmountInUsd =
     creditAmount > 0
-      ? await convertCurrency(creditAmount, creditCurrency, "USD")
+      ? convertCurrency(creditAmount, creditCurrency, "USD", rates)
       : 0;
 
   const isDebitSuspicious = debitAmountInUsd >= 10000;
