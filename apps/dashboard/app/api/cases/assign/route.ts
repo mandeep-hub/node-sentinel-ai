@@ -11,13 +11,18 @@ export async function POST() {
   const analystEmail = session.user.email;
 
   const existing = await prisma.case.findFirst({
-    where: { assignedTo: session.user.email, status: "IN_REVIEW" },
+    where: {
+      assignedTo: session.user.email,
+      status: { in: ["IN_REVIEW", "ESCALATED"] },
+    },
   });
   if (existing) {
     return NextResponse.json({ alreadyAssigned: true, case: existing });
   }
 
-  const openCases = await prisma.case.findMany({ where: { status: "OPEN" } });
+  const openCases = await prisma.case.findMany({
+    where: { status: "OPEN", assignedTo: null },
+  });
   if (openCases.length === 0) {
     return NextResponse.json({ noCases: true, case: null });
   }

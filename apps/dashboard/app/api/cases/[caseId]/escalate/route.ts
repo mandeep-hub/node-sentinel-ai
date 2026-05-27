@@ -19,7 +19,11 @@ export async function PATCH(
 
     const updated = await prisma.case.update({
       where: { caseId },
-      data: { escalated: true, escalatedAt: new Date() },
+      data: {
+        escalated: true,
+        escalatedAt: new Date(),
+        status: "ESCALATED",
+      },
     });
 
     return NextResponse.json(updated);

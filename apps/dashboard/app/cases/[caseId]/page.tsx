@@ -674,6 +674,14 @@ function StatusBadge({ status }: { status: string }) {
       </span>
     );
   }
+  if (status === "ESCALATED") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
+        <span className="size-1.5 rounded-full bg-destructive" />
+        ESCALATED
+      </span>
+    );
+  }
   if (status === "CLOSED") {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
