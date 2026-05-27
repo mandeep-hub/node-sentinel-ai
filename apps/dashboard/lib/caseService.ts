@@ -103,7 +103,13 @@ export async function createCaseForSuspiciousTransaction(
 
   const userCases = await prisma.case.findMany({
     where: { userId: newCase.userId },
-    select: { status: true, riskScore: true },
+    select: {
+      status: true,
+      riskScore: true,
+      amount: true,
+      createdAt: true,
+      transactionType: true,
+    },
   });
 
   const { riskScore, riskBand } = calculateRiskScore(
@@ -112,6 +118,9 @@ export async function createCaseForSuspiciousTransaction(
     userCases.map((uc) => ({
       status: uc.status as "OPEN" | "IN_REVIEW" | "CLOSED",
       riskScore: uc.riskScore ?? 0,
+      amount: uc.amount,
+      createdAt: uc.createdAt,
+      transactionType: uc.transactionType as "deposit" | "withdrawal" | "trade",
     })),
   );
 
