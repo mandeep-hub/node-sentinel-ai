@@ -82,6 +82,20 @@ export default function CaseDetailPage({
         }
         const data = (await res.json()) as CaseData;
 
+        if (!data.aiSummary) {
+          try {
+            const aiRes = await fetch(`/api/cases/${caseId}/ai-summary`, {
+              method: "PATCH",
+            });
+            if (aiRes.ok) {
+              const aiData = (await aiRes.json()) as CaseData;
+              data.aiSummary = aiData.aiSummary;
+            }
+          } catch {
+            // falls through to "No AI summary available."
+          }
+        }
+
         const actions: string[] = [];
 
         actions.push("- Contact customer");
