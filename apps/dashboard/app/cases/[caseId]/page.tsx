@@ -33,7 +33,6 @@ type CaseData = {
   riskScore: number;
   riskBand: string | null;
   notes: string | null;
-  resolvedAt: string | null;
 };
 
 type NoteEntry = { text: string; savedAt: string };
@@ -167,7 +166,7 @@ export default function CaseDetailPage({
           <>
             <EscalateBar caseData={caseData} onUpdate={setCaseData} />
             <CaseDetails caseData={caseData} setCaseData={setCaseData} />
-            <NotesSection caseData={caseData} setCaseData={setCaseData} />
+
             <ResolveSection caseData={caseData} onUpdate={setCaseData} />
           </>
         )}
@@ -523,27 +522,6 @@ function AuditLog({ caseData }: { caseData: CaseData }) {
       )}
     </div>
   );
-}
-
-type NoteEntry = { text: string; savedAt: string };
-
-function parseNotes(raw: string | null): NoteEntry[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.filter(
-        (e): e is NoteEntry =>
-          e &&
-          typeof e === "object" &&
-          typeof e.text === "string" &&
-          typeof e.savedAt === "string",
-      );
-    }
-  } catch {
-    // fall through to plain-string handling
-  }
-  return [{ text: raw, savedAt: "" }];
 }
 
 function NotesSection({
