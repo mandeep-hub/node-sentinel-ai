@@ -255,11 +255,11 @@ export default function TransactionsPage() {
                       Debit
                     </th>
 
-                    <th className="w-36 min-w-36 max-w-36 px-4 py-3 text-right font-medium text-muted-foreground">
+                    <th className="w-36 min-w-36 max-w-36 px-4 py-3 text-right font-medium text-muted-foreground border-r border-border">
                       Credit
                     </th>
 
-                    <th className="pl-6 pr-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       Status
                     </th>
 
@@ -318,14 +318,14 @@ export default function TransactionsPage() {
                           />
                         </td>
 
-                        <td className="w-36 min-w-36 max-w-36 whitespace-nowrap px-4 py-3 text-right font-mono text-foreground">
+                        <td className="w-36 min-w-36 max-w-36 whitespace-nowrap px-4 py-3 text-right font-mono text-foreground border-r border-border">
                           <AmountCell
                             amount={tx.creditAmount}
                             currency={tx.creditCurrency}
                           />
                         </td>
 
-                        <td className="pl-6 pr-4 py-3">
+                        <td className="px-4 py-3">
                           <StatusBadge
                             status={tx.status}
                             flagReason={tx.flagReason}
