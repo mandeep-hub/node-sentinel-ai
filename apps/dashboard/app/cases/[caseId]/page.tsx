@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 type CaseData = {
   id: string;
@@ -148,28 +156,42 @@ export default function CaseDetailPage({
   }, [caseId]);
 
   return (
-    <div className="min-h-screen bg-background px-6 py-8">
-      <div className="mx-auto max-w-3xl">
-        <div className="mb-6">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/transactions">← Back to Transactions</Link>
-          </Button>
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        {/* Page header */}
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <Button variant="outline" size="sm" asChild className="mb-3">
+              <Link href="/transactions">← Back to Transactions</Link>
+            </Button>
+            <h1 className="font-mono text-lg font-semibold text-foreground">
+              {caseId}
+            </h1>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Case Details
+            </p>
+          </div>
+          {state === "found" && caseData && (
+            <div className="pt-1">
+              <StatusBadge status={caseData.status} />
+            </div>
+          )}
         </div>
 
         {state === "loading" && (
-          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
+          <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-card">
             <p className="text-sm text-muted-foreground">Loading…</p>
           </div>
         )}
 
         {state === "not-found" && (
-          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
+          <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-card">
             <p className="text-sm text-muted-foreground">Case not found.</p>
           </div>
         )}
 
         {state === "error" && (
-          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
+          <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-card">
             <p className="text-sm text-muted-foreground">
               Failed to load case.
             </p>
@@ -180,7 +202,6 @@ export default function CaseDetailPage({
           <>
             <EscalateBar caseData={caseData} onUpdate={setCaseData} />
             <CaseDetails caseData={caseData} setCaseData={setCaseData} />
-
             <ResolveSection caseData={caseData} onUpdate={setCaseData} />
           </>
         )}
@@ -216,25 +237,38 @@ function EscalateBar({
     }
   };
 
-  return (
-    <div className="mb-6 flex items-center gap-3">
-      <Button
-        variant="destructive"
-        onClick={handleEscalate}
-        disabled={escalated || submitting}
-      >
-        {escalated
-          ? "Case Escalated"
-          : submitting
-            ? "Escalating…"
-            : "Escalate Case"}
-      </Button>
-      {escalated && escalatedAt && (
-        <span className="text-sm text-muted-foreground">
-          Escalated at {escalatedAt}
+  if (escalated) {
+    return (
+      <div className="mb-4 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
+        <span className="size-2 shrink-0 rounded-full bg-destructive" />
+        <span className="text-sm font-medium text-destructive">
+          Case Escalated
         </span>
-      )}
-    </div>
+        {escalatedAt && (
+          <span className="text-xs text-muted-foreground">· {escalatedAt}</span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <Card className="mb-4">
+      <CardContent className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-foreground">Escalate Case</p>
+          <p className="text-xs text-muted-foreground">
+            Flag for senior compliance review
+          </p>
+        </div>
+        <Button
+          variant="destructive"
+          onClick={handleEscalate}
+          disabled={submitting}
+        >
+          {submitting ? "Escalating…" : "Escalate Case"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -272,52 +306,58 @@ function CaseDetails({
 
   return (
     <>
-      <div className="mb-6 rounded-lg border border-border bg-card p-4">
-        <h2 className="mb-2 text-lg font-semibold text-foreground">
-          AI Summary
-        </h2>
+      {/* AI Summary */}
+      <Card className="mb-4">
+        <CardHeader className="border-b">
+          <CardTitle>AI Summary</CardTitle>
+          <CardAction>
+            <Badge variant="secondary">AI Generated</Badge>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <p className="whitespace-pre-line text-sm leading-7 text-foreground">
+            {caseData.aiSummary ?? "No AI summary available."}
+          </p>
+          <details className="mt-4">
+            <summary className="cursor-pointer list-none text-sm font-medium text-yellow-500 hover:text-yellow-400">
+              ▸ Recommended Next Steps
+            </summary>
+            <div className="mt-3 whitespace-pre-line rounded-lg border border-border/60 bg-muted/40 px-4 py-3 text-sm text-foreground">
+              {caseData.recommendedActions ?? "No recommended actions available."}
+            </div>
+          </details>
+        </CardContent>
+      </Card>
 
-        <p className="whitespace-pre-line text-sm leading-7 text-foreground">
-          {caseData.aiSummary ?? "No AI summary available."}
-        </p>
-        <details className="mt-4">
-          <summary className="cursor-pointer text-sm font-medium text-yellow-500">
-            Recommended Next Steps
-          </summary>
-
-          <div className="mt-3 whitespace-pre-line rounded-md bg-muted p-3 text-sm text-foreground">
-            {caseData.recommendedActions ?? "No recommended actions available."}
+      {/* Message Customer */}
+      <Card className="mb-4">
+        <CardContent className="flex items-center gap-4">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">
+              Message Customer
+            </p>
+            {messageSentAt && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Sent at {messageSentAt}
+              </p>
+            )}
           </div>
-        </details>
-      </div>
-      <div className="mb-4 flex items-center gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">Case Details</h1>
-      </div>
-
-      <div className="mb-4 flex items-center gap-4 rounded-lg border border-border bg-card px-6 py-4">
-        <span className="text-sm font-medium text-muted-foreground">
-          Message Customer
-        </span>
-        <span
-          className={
-            caseData.messageSent
-              ? "inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400"
-              : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
-          }
-        >
           <span
             className={
               caseData.messageSent
-                ? "size-1.5 rounded-full bg-green-400"
-                : "size-1.5 rounded-full bg-muted-foreground"
+                ? "inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400"
+                : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
             }
-          />
-          {caseData.messageSent ? "Yes" : "No"}
-        </span>
-        {messageSentAt && (
-          <span className="text-xs text-muted-foreground">{messageSentAt}</span>
-        )}
-        <div className="ml-auto">
+          >
+            <span
+              className={
+                caseData.messageSent
+                  ? "size-1.5 rounded-full bg-green-400"
+                  : "size-1.5 rounded-full bg-muted-foreground"
+              }
+            />
+            {caseData.messageSent ? "Sent" : "Not sent"}
+          </span>
           <Button
             size="sm"
             onClick={handleSendMessage}
@@ -325,25 +365,27 @@ function CaseDetails({
           >
             {sending ? "Sending…" : "Send Message"}
           </Button>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <div className="mb-4 overflow-hidden rounded-lg border border-border bg-card">
-        <dl className="divide-y divide-border">
+      {/* Case Details grid */}
+      <Card className="mb-4 overflow-hidden py-0">
+        <CardHeader className="border-b">
+          <CardTitle>Case Details</CardTitle>
+        </CardHeader>
+        <dl className="divide-y divide-border/60">
           <DetailRow label="Case ID">
             <span className="font-mono text-sm text-foreground">
               {caseData.caseId}
             </span>
           </DetailRow>
           <DetailRow label="Risk Score">
-            <span className="font-mono text-sm text-foreground">
+            <span className="font-mono text-sm font-semibold text-foreground">
               {caseData.riskScore}
             </span>
           </DetailRow>
           <DetailRow label="Risk Band">
-            <span className="font-mono text-sm text-foreground">
-              {caseData.riskBand}
-            </span>
+            <RiskBandBadge band={caseData.riskBand} />
           </DetailRow>
           <DetailRow label="User ID">
             <span className="text-sm text-foreground">{caseData.userId}</span>
@@ -406,7 +448,7 @@ function CaseDetails({
             <span className="text-sm text-foreground">{createdAt}</span>
           </DetailRow>
         </dl>
-      </div>
+      </Card>
 
       <NotesSection caseData={caseData} setCaseData={setCaseData} />
       <AuditLog caseData={caseData} />
@@ -504,37 +546,39 @@ function AuditLog({ caseData }: { caseData: CaseData }) {
   const events = buildAuditEvents(caseData);
 
   return (
-    <div className="mb-4 rounded-lg border border-border bg-card px-6 py-4">
-      <h2 className="mb-4 text-sm font-medium text-muted-foreground">
-        Audit Log
-      </h2>
-      {events.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No events yet.</p>
-      ) : (
-        <ol className="relative ml-2 space-y-5 border-l border-border pl-6">
-          {events.map((event) => (
-            <li key={event.key} className="relative">
-              <span
-                className={`absolute -left-[1.85rem] top-1.5 size-2.5 rounded-full ring-4 ${dotClasses[event.color]}`}
-              />
-              <div className="flex flex-wrap items-baseline gap-x-3">
-                <span className="text-sm font-medium text-foreground">
-                  {event.label}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(event.timestamp).toLocaleString()}
-                </span>
-              </div>
-              {event.detail && (
-                <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
-                  {event.detail}
-                </p>
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
+    <Card className="mb-4">
+      <CardHeader className="border-b">
+        <CardTitle>Audit Log</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {events.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No events yet.</p>
+        ) : (
+          <ol className="relative ml-1 space-y-4 border-l border-border pl-5">
+            {events.map((event) => (
+              <li key={event.key} className="relative">
+                <span
+                  className={`absolute -left-[1.6rem] top-1.5 size-2.5 rounded-full ring-4 ${dotClasses[event.color]}`}
+                />
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="text-sm font-medium text-foreground">
+                    {event.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(event.timestamp).toLocaleString()}
+                  </span>
+                </div>
+                {event.detail && (
+                  <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">
+                    {event.detail}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -576,47 +620,56 @@ function NotesSection({
   };
 
   return (
-    <div className="mb-4 rounded-lg border border-border bg-card px-6 py-4">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground">Notes</span>
-        {showSaved && <span className="text-xs text-green-400">Saved</span>}
-      </div>
-      <textarea
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        rows={4}
-        placeholder="Add a note about this case…"
-        className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-      />
-      <div className="mt-3">
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={saving || !draft.trim()}
-        >
-          {saving ? "Saving…" : "Save Note"}
-        </Button>
-      </div>
-      {sorted.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {sorted.map((entry, idx) => (
-            <div
-              key={`${entry.savedAt}-${idx}`}
-              className="rounded-md border border-border bg-background px-3 py-2"
-            >
-              <div className="text-xs text-muted-foreground">
-                {entry.savedAt
-                  ? new Date(entry.savedAt).toLocaleString()
-                  : "Previously saved"}
-              </div>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                {entry.text}
-              </p>
-            </div>
-          ))}
+    <Card className="mb-4">
+      <CardHeader className="border-b">
+        <CardTitle>Notes</CardTitle>
+        <CardAction>
+          {showSaved && (
+            <span className="text-xs font-medium text-green-400">✓ Saved</span>
+          )}
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={3}
+          placeholder="Add a note about this case…"
+          className="w-full resize-none rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+        />
+        <div className="mt-2 flex justify-end">
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={saving || !draft.trim()}
+          >
+            {saving ? "Saving…" : "Save Note"}
+          </Button>
         </div>
-      )}
-    </div>
+        {sorted.length > 0 && (
+          <>
+            <div className="mt-4 border-t border-border" />
+            <div className="mt-4 space-y-2.5">
+              {sorted.map((entry, idx) => (
+                <div
+                  key={`${entry.savedAt}-${idx}`}
+                  className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5"
+                >
+                  <div className="mb-1 text-xs text-muted-foreground">
+                    {entry.savedAt
+                      ? new Date(entry.savedAt).toLocaleString()
+                      : "Previously saved"}
+                  </div>
+                  <p className="whitespace-pre-wrap text-sm text-foreground">
+                    {entry.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -628,12 +681,57 @@ function DetailRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-6 px-6 py-4">
-      <dt className="w-36 shrink-0 text-sm font-medium text-muted-foreground">
+    <div className="flex items-center gap-6 px-4 py-3">
+      <dt className="w-28 shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>
-      <dd>{children}</dd>
+      <dd className="flex-1">{children}</dd>
     </div>
+  );
+}
+
+function RiskBandBadge({ band }: { band: string | null }) {
+  if (!band) return <span className="text-sm text-muted-foreground">—</span>;
+
+  const upper = band.toUpperCase();
+
+  if (upper === "LOW") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
+        <span className="size-1.5 rounded-full bg-green-400" />
+        {band}
+      </span>
+    );
+  }
+  if (upper === "MEDIUM") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+        <span className="size-1.5 rounded-full bg-primary" />
+        {band}
+      </span>
+    );
+  }
+  if (upper === "HIGH") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-medium text-orange-400">
+        <span className="size-1.5 rounded-full bg-orange-400" />
+        {band}
+      </span>
+    );
+  }
+  if (upper === "CRITICAL" || upper === "RESTRICTED") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
+        <span className="size-1.5 rounded-full bg-destructive" />
+        {band}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+      <span className="size-1.5 rounded-full bg-muted-foreground" />
+      {band}
+    </span>
   );
 }
 
@@ -743,58 +841,64 @@ function ResolveSection({
   };
 
   return (
-    <div className="mt-6 rounded-lg border border-border bg-card px-6 py-5">
-      <h2 className="mb-4 text-lg font-semibold text-foreground">
-        Resolve Case
-      </h2>
+    <Card className="mb-4">
+      <CardHeader className="border-b">
+        <CardTitle>Resolve Case</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-foreground">
+          <input
+            type="checkbox"
+            className="size-4 cursor-pointer rounded border-border bg-background accent-primary disabled:cursor-not-allowed"
+            checked={caseData.autoAssignOnResolve}
+            disabled={resolved || savingAutoAssign}
+            onChange={(e) => handleToggleAutoAssign(e.target.checked)}
+          />
+          Auto-assign new case after resolving
+        </label>
 
-      <label className="mb-4 flex items-center gap-2 text-sm text-foreground">
-        <input
-          type="checkbox"
-          className="size-4 cursor-pointer rounded border-border bg-background accent-primary disabled:cursor-not-allowed"
-          checked={caseData.autoAssignOnResolve}
-          disabled={resolved || savingAutoAssign}
-          onChange={(e) => handleToggleAutoAssign(e.target.checked)}
-        />
-        Auto-assign new case after resolving
-      </label>
-
-      {!resolved && (
-        <Button onClick={handleResolve} disabled={resolving}>
-          {resolving ? "Resolving…" : "Resolve Case"}
-        </Button>
-      )}
-
-      {resolved && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Button disabled>Case Resolved</Button>
-            {resolvedAt && (
-              <span className="text-sm text-muted-foreground">
-                Resolved at {resolvedAt}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button variant="outline" asChild>
-              <Link href="/transactions">← Back to Transactions</Link>
+        {!resolved && (
+          <div>
+            <Button onClick={handleResolve} disabled={resolving}>
+              {resolving ? "Resolving…" : "Resolve Case"}
             </Button>
-            {caseData.autoAssignOnResolve && (
-              <Button onClick={handleGetNewCase} disabled={assigning}>
-                {assigning ? "Assigning…" : "Get New Case"}
+          </div>
+        )}
+
+        {resolved && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-400">
+                <span className="size-1.5 rounded-full bg-green-400" />
+                Case Resolved
+              </span>
+              {resolvedAt && (
+                <span className="text-xs text-muted-foreground">
+                  Resolved at {resolvedAt}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/transactions">← Back to Transactions</Link>
               </Button>
+              {caseData.autoAssignOnResolve && (
+                <Button onClick={handleGetNewCase} disabled={assigning}>
+                  {assigning ? "Assigning…" : "Get New Case"}
+                </Button>
+              )}
+            </div>
+
+            {assignError && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {assignError}
+              </div>
             )}
           </div>
-
-          {assignError && (
-            <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {assignError}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
