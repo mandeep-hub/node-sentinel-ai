@@ -79,11 +79,22 @@ Other services:
 
 Next.js 16 App Router. shadcn/ui components are installed locally under `apps/dashboard/components/ui/` (not in `packages/ui`). `packages/ui` holds minimal shared primitives (`button`, `card`, `code`). Tailwind 4 is used (PostCSS plugin; no v3 config file).
 
+UI pages:
+- `/` — landing/login page (server component, checks Auth0 session)
+- `/transactions` — live transaction feed; polls the engine every 4 s directly via `NEXT_PUBLIC_TRANSACTION_ENGINE_URL` (bypasses the Next.js API proxy). Shows flagged transactions highlighted and lets analysts request a case.
+- `/cases/[caseId]` — case detail page (client component). Fetches `/api/cases/[caseId]` on load; if `aiSummary` is missing, immediately calls `PATCH /api/cases/[caseId]/ai-summary` to generate one. Renders: AI summary + recommended actions, case fields, notes, audit log, escalate button, resolve section.
+
 API routes under `app/api/`:
 - `transactions/` — proxies the engine
 - `cases/` — GET returns OPEN cases; POST calls `caseService.createCaseForSuspiciousTransaction` (called by the engine webhook)
 - `cases/[caseId]/` — GET a single case by its `caseId` string
-- `cases/assign/` — POST assigns a random OPEN case to the authenticated analyst (Auth0 session email); sets status to `IN_REVIEW`
+- `cases/[caseId]/ai-summary` — PATCH generates/regenerates AI summary via Gemini and saves it
+- `cases/[caseId]/escalate` — PATCH sets `escalated=true`, `escalatedAt`, `status=ESCALATED`; idempotent
+- `cases/[caseId]/resolve` — PATCH sets `status=CLOSED`, `resolvedAt`; idempotent
+- `cases/[caseId]/message` — PATCH sets `messageSent=true`, `messageSentAt`
+- `cases/[caseId]/notes` — PATCH appends a note entry; notes are stored as `JSON.stringify({text, savedAt}[])` in the `notes` text field, not as a plain string
+- `cases/[caseId]/auto-assign` — PATCH sets the `autoAssignOnResolve` boolean flag
+- `cases/assign/` — POST assigns a random OPEN case to the authenticated analyst (Auth0 session email); sets status to `IN_REVIEW`; returns `{alreadyAssigned, noCases, case}`
 - `cases/summary/` — reads aggregate stats from the dashboard's own Prisma
 - `scan/` — manual trigger for `fraudScanner.scanTransactions()`
 - `ai-summary/` — POST calls `aiSummaryService.generateAiSummary` (Gemini)
@@ -115,6 +126,8 @@ A transaction can have either or both sides set — `balanceService` interprets 
 
 There is no foreign key between `Case.transactionId` and the engine's `Transaction.id` — they live in separate Prisma schemas.
 
+Case status transitions: `OPEN → IN_REVIEW` (on assign) → `ESCALATED` (on escalate) or `CLOSED` (on resolve). The `escalated` boolean and `status=ESCALATED` are set together; a case can be both `IN_REVIEW` and `escalated=true`. `apps/cases/mock-data.ts` is a stale unused file — the UI fetches live data from the API.
+
 ## Environment variables
 
 **`apps/dashboard/.env.local`**:
@@ -127,6 +140,7 @@ APP_BASE_URL=http://localhost:3000
 GEMINI_API_KEY=
 GEMINI_MODEL=       # optional, defaults to gemini-2.5-flash
 DATABASE_URL=
+NEXT_PUBLIC_TRANSACTION_ENGINE_URL=http://localhost:5000   # used client-side by the transactions page
 ```
 
 **`apps/transaction-engine/.env`**:
