@@ -156,8 +156,8 @@ export default function CaseDetailPage({
   }, [caseId]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="flex min-h-screen justify-center bg-background">
+      <div className="w-full max-w-4xl px-6 py-6">
         {/* Page header */}
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
@@ -239,7 +239,7 @@ function EscalateBar({
 
   if (escalated) {
     return (
-      <div className="mb-4 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
+      <div className="mb-5 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
         <span className="size-2 shrink-0 rounded-full bg-destructive" />
         <span className="text-sm font-medium text-destructive">
           Case Escalated
@@ -252,8 +252,8 @@ function EscalateBar({
   }
 
   return (
-    <Card className="mb-4">
-      <CardContent className="flex items-center justify-between">
+    <Card className="mb-5">
+      <CardContent className="flex items-center gap-4">
         <div>
           <p className="text-sm font-medium text-foreground">Escalate Case</p>
           <p className="text-xs text-muted-foreground">
@@ -262,6 +262,7 @@ function EscalateBar({
         </div>
         <Button
           variant="destructive"
+          className="h-9 shrink-0 px-4"
           onClick={handleEscalate}
           disabled={submitting}
         >
@@ -307,7 +308,7 @@ function CaseDetails({
   return (
     <>
       {/* AI Summary */}
-      <Card className="mb-4">
+      <Card className="mb-5">
         <CardHeader className="border-b">
           <CardTitle>AI Summary</CardTitle>
           <CardAction>
@@ -330,9 +331,9 @@ function CaseDetails({
       </Card>
 
       {/* Message Customer */}
-      <Card className="mb-4">
-        <CardContent className="flex items-center gap-4">
-          <div className="flex-1">
+      <Card className="mb-5">
+        <CardContent className="flex items-center gap-3">
+          <div>
             <p className="text-sm font-medium text-foreground">
               Message Customer
             </p>
@@ -342,34 +343,36 @@ function CaseDetails({
               </p>
             )}
           </div>
-          <span
-            className={
-              caseData.messageSent
-                ? "inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400"
-                : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
-            }
-          >
+          <div className="flex items-center gap-2.5">
             <span
               className={
                 caseData.messageSent
-                  ? "size-1.5 rounded-full bg-green-400"
-                  : "size-1.5 rounded-full bg-muted-foreground"
+                  ? "inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400"
+                  : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
               }
-            />
-            {caseData.messageSent ? "Sent" : "Not sent"}
-          </span>
-          <Button
-            size="sm"
-            onClick={handleSendMessage}
-            disabled={caseData.messageSent || sending}
-          >
-            {sending ? "Sending…" : "Send Message"}
-          </Button>
+            >
+              <span
+                className={
+                  caseData.messageSent
+                    ? "size-1.5 rounded-full bg-green-400"
+                    : "size-1.5 rounded-full bg-muted-foreground"
+                }
+              />
+              {caseData.messageSent ? "Sent" : "Not sent"}
+            </span>
+            <Button
+              className="h-9 px-4"
+              onClick={handleSendMessage}
+              disabled={caseData.messageSent || sending}
+            >
+              {sending ? "Sending…" : "Send Message"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
       {/* Case Details grid */}
-      <Card className="mb-4 overflow-hidden py-0">
+      <Card className="mb-5 overflow-hidden py-0">
         <CardHeader className="border-b">
           <CardTitle>Case Details</CardTitle>
         </CardHeader>
@@ -546,7 +549,7 @@ function AuditLog({ caseData }: { caseData: CaseData }) {
   const events = buildAuditEvents(caseData);
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-5">
       <CardHeader className="border-b">
         <CardTitle>Audit Log</CardTitle>
       </CardHeader>
@@ -620,7 +623,7 @@ function NotesSection({
   };
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-5">
       <CardHeader className="border-b">
         <CardTitle>Notes</CardTitle>
         <CardAction>
@@ -639,7 +642,7 @@ function NotesSection({
         />
         <div className="mt-2 flex justify-end">
           <Button
-            size="sm"
+            className="h-9 px-4"
             onClick={handleSave}
             disabled={saving || !draft.trim()}
           >
@@ -841,7 +844,7 @@ function ResolveSection({
   };
 
   return (
-    <Card className="mb-4">
+    <Card className="mb-5">
       <CardHeader className="border-b">
         <CardTitle>Resolve Case</CardTitle>
       </CardHeader>
@@ -859,7 +862,7 @@ function ResolveSection({
 
         {!resolved && (
           <div>
-            <Button onClick={handleResolve} disabled={resolving}>
+            <Button className="h-9 px-4" onClick={handleResolve} disabled={resolving}>
               {resolving ? "Resolving…" : "Resolve Case"}
             </Button>
           </div>
@@ -880,11 +883,11 @@ function ResolveSection({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" asChild>
+              <Button variant="outline" className="h-9 px-4" asChild>
                 <Link href="/transactions">← Back to Transactions</Link>
               </Button>
               {caseData.autoAssignOnResolve && (
-                <Button onClick={handleGetNewCase} disabled={assigning}>
+                <Button className="h-9 px-4" onClick={handleGetNewCase} disabled={assigning}>
                   {assigning ? "Assigning…" : "Get New Case"}
                 </Button>
               )}

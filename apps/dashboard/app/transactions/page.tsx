@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import LogoutButton from "@/components/ui/LogoutButton";
 
 interface CurrencyRef {
@@ -56,6 +55,8 @@ export default function TransactionsPage() {
   const caseLabel = openCases === 1 ? "case" : "cases";
   const verbLabel = openCases === 1 ? "is" : "are";
   const [assignedCase, setAssignedCase] = useState<Case | null>(null);
+
+  const flaggedCount = transactions.filter((t) => t.flagReason !== null).length;
 
   const fetchTransactions = useCallback(async () => {
     try {
@@ -149,15 +150,24 @@ export default function TransactionsPage() {
   return (
     <div className="min-h-screen bg-background px-6 py-8 text-foreground">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="mb-6 flex items-center justify-between">
+        {/* Page header */}
+        <div className="mb-6 flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Transactions
-            </h1>
-
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl font-semibold text-foreground">
+                Transactions
+              </h1>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">
+                <span className="relative flex size-1.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-green-400" />
+                </span>
+                Live
+              </span>
+            </div>
             {lastUpdated && (
               <p className="mt-1 text-xs text-muted-foreground">
-                Last updated {lastUpdated.toLocaleTimeString()}
+                Updated {lastUpdated.toLocaleTimeString()}
               </p>
             )}
           </div>
@@ -165,31 +175,32 @@ export default function TransactionsPage() {
         </div>
 
         {error && (
-          <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <div className="mb-6 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         )}
 
+        {/* Case queue action bar */}
         <Card className="mb-8">
-          <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <Badge>
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex h-9 items-center rounded-lg border border-yellow-400/30 bg-yellow-400/90 px-4 text-sm font-medium text-black">
                 {openCases === 0
                   ? "No open cases"
                   : `${openCases} open ${caseLabel}`}
-              </Badge>
+              </span>
 
               {assignedCase ? (
                 <Button
-                  className="bg-yellow-600 hover:bg-yellow-700 text-black font-semibold"
+                  className="h-9 rounded-lg bg-yellow-500 px-4 text-sm font-semibold text-black hover:bg-yellow-400"
                   asChild
                 >
-                  <a href={`/cases/${assignedCase.caseId}`}>View my case</a>
+                  <a href={`/cases/${assignedCase.caseId}`}>View my case →</a>
                 </Button>
               ) : (
                 <Button
                   onClick={requestCase}
-                  className="bg-yellow-500 hover:bg-yellow-700 text-black font-semibold"
+                  className="h-9 rounded-lg bg-yellow-500 px-4 text-sm font-semibold text-black hover:bg-yellow-400"
                 >
                   Request new case
                 </Button>
@@ -198,134 +209,150 @@ export default function TransactionsPage() {
           </CardContent>
         </Card>
 
+        {/* Transaction table */}
         {loading && transactions.length === 0 ? (
-          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
+          <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-card">
             <p className="text-sm text-muted-foreground">
               Loading transactions…
             </p>
           </div>
         ) : transactions.length === 0 && !error ? (
-          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card">
+          <div className="flex h-48 items-center justify-center rounded-xl border border-border bg-card">
             <p className="text-sm text-muted-foreground">
               No transactions found.
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border bg-card">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    ID
-                  </th>
+          <>
+            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{transactions.length.toLocaleString()} transactions</span>
+              {flaggedCount > 0 && (
+                <>
+                  <span>·</span>
+                  <span className="font-medium text-destructive">
+                    {flaggedCount} flagged
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="overflow-hidden rounded-xl border border-border bg-card">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      Tx ID
+                    </th>
 
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    User
-                  </th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      User
+                    </th>
 
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Kind
-                  </th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      Type
+                    </th>
 
-                  <th className="w-36 min-w-36 max-w-36 px-4 py-3 text-right font-medium text-muted-foreground">
-                    Debit
-                  </th>
+                    <th className="w-36 min-w-36 max-w-36 px-4 py-3 text-right font-medium text-muted-foreground">
+                      Debit
+                    </th>
 
-                  <th className="w-36 min-w-36 max-w-36 px-4 py-3 text-right font-medium text-muted-foreground">
-                    Credit
-                  </th>
+                    <th className="w-36 min-w-36 max-w-36 px-4 py-3 text-right font-medium text-muted-foreground">
+                      Credit
+                    </th>
 
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Status
-                  </th>
+                    <th className="pl-6 pr-4 py-3 text-left font-medium text-muted-foreground">
+                      Status
+                    </th>
 
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Country
-                  </th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      Country
+                    </th>
 
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Profession
-                  </th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      Profession
+                    </th>
 
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                    Date
-                  </th>
-                </tr>
-              </thead>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
 
-              <tbody>
-                {transactions.map((tx, i) => {
-                  const flagged = tx.flagReason !== null;
+                <tbody>
+                  {transactions.map((tx, i) => {
+                    const flagged = tx.flagReason !== null;
 
-                  const zebra = i % 2 === 0 ? "bg-card" : "bg-muted/10";
+                    const zebra = i % 2 === 0 ? "bg-card" : "bg-muted/10";
 
-                  const rowClass = flagged
-                    ? "border-l-2 border-l-destructive bg-destructive/5"
-                    : zebra;
+                    const rowClass = flagged
+                      ? "border-l-2 border-l-destructive bg-destructive/5"
+                      : zebra;
 
-                  return (
-                    <motion.tr
-                      key={tx.id}
-                      className={`border-b border-border last:border-0 ${rowClass} transition-colors hover:bg-muted/20`}
-                      layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.25, ease: "easeOut" }}
-                    >
-                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                        {tx.id.length > 12 ? `${tx.id.slice(0, 12)}…` : tx.id}
-                      </td>
-
-                      <td className="px-4 py-3 text-foreground">
-                        {tx.user.name}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <KindBadge tx={tx} />
-                      </td>
-
-                      <td className="w-36 min-w-36 max-w-36 whitespace-nowrap px-4 py-3 text-right font-mono text-foreground">
-                        <AmountCell
-                          amount={tx.debitAmount}
-                          currency={tx.debitCurrency}
-                        />
-                      </td>
-
-                      <td className="w-36 min-w-36 max-w-36 whitespace-nowrap px-4 py-3 text-right font-mono text-foreground">
-                        <AmountCell
-                          amount={tx.creditAmount}
-                          currency={tx.creditCurrency}
-                        />
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <StatusBadge
-                          status={tx.status}
-                          flagReason={tx.flagReason}
-                        />
-                      </td>
-
-                      <td className="px-4 py-3 text-xs uppercase text-muted-foreground">
-                        {tx.country ?? "—"}
-                      </td>
-
-                      <td
-                        className="max-w-[12rem] overflow-hidden text-ellipsis whitespace-nowrap px-4 py-3 text-xs text-muted-foreground"
-                        title={tx.profession ?? undefined}
+                    return (
+                      <motion.tr
+                        key={tx.id}
+                        className={`border-b border-border last:border-0 ${rowClass} transition-colors hover:bg-muted/20`}
+                        layout
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeOut" }}
                       >
-                        {tx.profession ?? "—"}
-                      </td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                          {tx.id.length > 12
+                            ? `${tx.id.slice(0, 12)}…`
+                            : tx.id}
+                        </td>
 
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {new Date(tx.createdAt).toLocaleString()}
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <td className="px-4 py-3 text-foreground">
+                          {tx.user.name}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <KindBadge tx={tx} />
+                        </td>
+
+                        <td className="w-36 min-w-36 max-w-36 whitespace-nowrap px-4 py-3 text-right font-mono text-foreground">
+                          <AmountCell
+                            amount={tx.debitAmount}
+                            currency={tx.debitCurrency}
+                          />
+                        </td>
+
+                        <td className="w-36 min-w-36 max-w-36 whitespace-nowrap px-4 py-3 text-right font-mono text-foreground">
+                          <AmountCell
+                            amount={tx.creditAmount}
+                            currency={tx.creditCurrency}
+                          />
+                        </td>
+
+                        <td className="pl-6 pr-4 py-3">
+                          <StatusBadge
+                            status={tx.status}
+                            flagReason={tx.flagReason}
+                          />
+                        </td>
+
+                        <td className="px-4 py-3 text-xs uppercase text-muted-foreground">
+                          {tx.country ?? "—"}
+                        </td>
+
+                        <td
+                          className="max-w-[12rem] overflow-hidden text-ellipsis whitespace-nowrap px-4 py-3 text-xs text-muted-foreground"
+                          title={tx.profession ?? undefined}
+                        >
+                          {tx.profession ?? "—"}
+                        </td>
+
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {new Date(tx.createdAt).toLocaleString()}
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -394,26 +421,33 @@ function StatusBadge({
 }) {
   if (status === "flagged" || flagReason) {
     return (
-      <span
-        className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive"
-        title={flagReason ?? undefined}
-      >
-        <span aria-hidden>⚠</span>
-        {status}
-      </span>
+      <div>
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive"
+          title={flagReason ?? undefined}
+        >
+          <span aria-hidden>⚠</span>
+          Flagged
+        </span>
+        {flagReason && (
+          <p className="mt-0.5 max-w-[14rem] truncate text-xs text-destructive/70">
+            {flagReason}
+          </p>
+        )}
+      </div>
     );
   }
 
   if (status === "settled") {
-    return <StatusPill tone="green">settled</StatusPill>;
+    return <StatusPill tone="green">Settled</StatusPill>;
   }
 
   if (status === "pending") {
-    return <StatusPill tone="orange">pending</StatusPill>;
+    return <StatusPill tone="orange">Pending</StatusPill>;
   }
 
   if (status === "reversed") {
-    return <StatusPill tone="muted">reversed</StatusPill>;
+    return <StatusPill tone="muted">Reversed</StatusPill>;
   }
 
   return <StatusPill tone="muted">{status}</StatusPill>;
