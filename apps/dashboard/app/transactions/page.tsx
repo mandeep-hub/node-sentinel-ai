@@ -190,7 +190,7 @@ export default function TransactionsPage() {
 
             {assignedCase ? (
               <Button
-                className="h-10 cursor-pointer rounded-lg bg-yellow-500 px-5 text-sm font-semibold text-black hover:bg-yellow-400"
+                className="h-10 cursor-pointer rounded-lg bg-yellow-500 !px-7 text-sm font-semibold text-black hover:bg-yellow-400"
                 asChild
               >
                 <a href={`/cases/${assignedCase.caseId}`}>View my case →</a>
@@ -198,7 +198,7 @@ export default function TransactionsPage() {
             ) : (
               <Button
                 onClick={requestCase}
-                className="h-10 cursor-pointer rounded-lg bg-yellow-500 px-5 text-sm font-semibold text-black hover:bg-yellow-400"
+                className="h-10 cursor-pointer rounded-lg bg-yellow-500 !px-7 text-sm font-semibold text-black hover:bg-yellow-400"
               >
                 Request new case
               </Button>

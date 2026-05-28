@@ -158,18 +158,20 @@ export default function CaseDetailPage({
   return (
     <div className="flex min-h-screen items-start justify-center bg-background">
       <div className="w-full max-w-4xl px-6 pt-12 pb-16">
-        {/* Page header */}
-        <div className="mb-6 flex items-start justify-between gap-4">
+        {/* Back navigation */}
+        <div className="mb-8">
+          <Button
+            variant="outline"
+            asChild
+            className="h-9 cursor-pointer rounded-lg border border-yellow-400/20 bg-yellow-400/10 !px-7 text-sm text-yellow-200 hover:bg-yellow-400/20 hover:text-yellow-100"
+          >
+            <Link href="/transactions">← Back to Transactions</Link>
+          </Button>
+        </div>
+
+        {/* Page title + status badge */}
+        <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <Button
-              variant="outline"
-              asChild
-              className="mb-4 h-9 cursor-pointer rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-4 text-sm text-yellow-200 hover:bg-yellow-400/20 hover:text-yellow-100"
-            >
-              <Link href="/transactions">
-                Back to Transactions
-              </Link>
-            </Button>
             <h1 className="font-mono text-lg font-semibold text-foreground">
               {caseId}
             </h1>
@@ -206,8 +208,7 @@ export default function CaseDetailPage({
 
         {state === "found" && caseData && (
           <>
-            <EscalateBar caseData={caseData} onUpdate={setCaseData} />
-            <CaseDetails caseData={caseData} setCaseData={setCaseData} />
+            <CaseDetails caseData={caseData} setCaseData={setCaseData} onUpdate={setCaseData} />
             <ResolveSection caseData={caseData} onUpdate={setCaseData} />
           </>
         )}
@@ -245,30 +246,37 @@ function EscalateBar({
 
   if (escalated) {
     return (
-      <div className="mb-6 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
-        <span className="size-2 shrink-0 rounded-full bg-destructive" />
-        <span className="text-sm font-medium text-destructive">
-          Case Escalated
-        </span>
-        {escalatedAt && (
-          <span className="text-xs text-muted-foreground">· {escalatedAt}</span>
-        )}
-      </div>
+      <Card className="mb-6">
+        <CardHeader className="border-b">
+          <CardTitle>Escalate Case</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3">
+            <span className="size-2 shrink-0 rounded-full bg-destructive" />
+            <span className="text-sm font-medium text-destructive">
+              Case Escalated
+            </span>
+            {escalatedAt && (
+              <span className="text-xs text-muted-foreground">· {escalatedAt}</span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <Card className="mb-6">
+      <CardHeader className="border-b">
+        <CardTitle>Escalate Case</CardTitle>
+      </CardHeader>
       <CardContent className="flex items-center gap-4">
-        <div>
-          <p className="text-sm font-medium text-foreground">Escalate Case</p>
-          <p className="text-xs text-muted-foreground">
-            Flag for senior compliance review
-          </p>
-        </div>
+        <p className="flex-1 text-sm text-muted-foreground">
+          Flag for senior compliance review
+        </p>
         <Button
           variant="destructive"
-          className="h-10 shrink-0 cursor-pointer px-5"
+          className="h-10 shrink-0 cursor-pointer !px-7"
           onClick={handleEscalate}
           disabled={submitting}
         >
@@ -282,9 +290,11 @@ function EscalateBar({
 function CaseDetails({
   caseData,
   setCaseData,
+  onUpdate,
 }: {
   caseData: CaseData;
   setCaseData: (data: CaseData) => void;
+  onUpdate: (data: CaseData) => void;
 }) {
   const amount = Number(caseData.amount);
   const createdAt = new Date(caseData.createdAt).toLocaleString();
@@ -336,44 +346,44 @@ function CaseDetails({
         </CardContent>
       </Card>
 
+      <EscalateBar caseData={caseData} onUpdate={onUpdate} />
+
       {/* Message Customer */}
       <Card className="mb-6">
-        <CardContent className="flex items-center gap-3">
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              Message Customer
-            </p>
-            {messageSentAt && (
-              <p className="mt-0.5 text-xs text-muted-foreground">
+        <CardHeader className="border-b">
+          <CardTitle>Message Customer</CardTitle>
+          {messageSentAt && (
+            <CardAction>
+              <span className="text-xs text-muted-foreground">
                 Sent at {messageSentAt}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2.5">
+              </span>
+            </CardAction>
+          )}
+        </CardHeader>
+        <CardContent className="flex items-center gap-4">
+          <span
+            className={
+              caseData.messageSent
+                ? "inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400"
+                : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+            }
+          >
             <span
               className={
                 caseData.messageSent
-                  ? "inline-flex items-center gap-1.5 rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400"
-                  : "inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+                  ? "size-1.5 rounded-full bg-green-400"
+                  : "size-1.5 rounded-full bg-muted-foreground"
               }
-            >
-              <span
-                className={
-                  caseData.messageSent
-                    ? "size-1.5 rounded-full bg-green-400"
-                    : "size-1.5 rounded-full bg-muted-foreground"
-                }
-              />
-              {caseData.messageSent ? "Sent" : "Not sent"}
-            </span>
-            <Button
-              className="h-10 cursor-pointer px-5"
-              onClick={handleSendMessage}
-              disabled={caseData.messageSent || sending}
-            >
-              {sending ? "Sending…" : "Send Message"}
-            </Button>
-          </div>
+            />
+            {caseData.messageSent ? "Sent" : "Not sent"}
+          </span>
+          <Button
+            className="h-10 cursor-pointer !px-7"
+            onClick={handleSendMessage}
+            disabled={caseData.messageSent || sending}
+          >
+            {sending ? "Sending…" : "Send Message"}
+          </Button>
         </CardContent>
       </Card>
 
@@ -648,7 +658,7 @@ function NotesSection({
         />
         <div className="mt-2 flex justify-end">
           <Button
-            className="h-10 cursor-pointer px-5"
+            className="h-10 cursor-pointer !px-7"
             onClick={handleSave}
             disabled={saving || !draft.trim()}
           >
@@ -868,7 +878,7 @@ function ResolveSection({
 
         {!resolved && (
           <div>
-            <Button className="h-10 cursor-pointer px-5" onClick={handleResolve} disabled={resolving}>
+            <Button className="h-10 cursor-pointer !px-7" onClick={handleResolve} disabled={resolving}>
               {resolving ? "Resolving…" : "Resolve Case"}
             </Button>
           </div>
@@ -896,7 +906,7 @@ function ResolveSection({
                 ← Back to Transactions
               </Link>
               {caseData.autoAssignOnResolve && (
-                <Button className="h-10 cursor-pointer px-5" onClick={handleGetNewCase} disabled={assigning}>
+                <Button className="h-10 cursor-pointer !px-7" onClick={handleGetNewCase} disabled={assigning}>
                   {assigning ? "Assigning…" : "Get New Case"}
                 </Button>
               )}
