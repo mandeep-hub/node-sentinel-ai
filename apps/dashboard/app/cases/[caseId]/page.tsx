@@ -156,13 +156,19 @@ export default function CaseDetailPage({
   }, [caseId]);
 
   return (
-    <div className="flex min-h-screen justify-center bg-background">
-      <div className="w-full max-w-4xl px-6 py-6">
+    <div className="flex min-h-screen items-start justify-center bg-background">
+      <div className="w-full max-w-4xl px-6 pt-12 pb-16">
         {/* Page header */}
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <Button variant="outline" size="sm" asChild className="mb-3">
-              <Link href="/transactions">← Back to Transactions</Link>
+            <Button
+              variant="outline"
+              asChild
+              className="mb-4 h-9 cursor-pointer rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-4 text-sm text-yellow-200 hover:bg-yellow-400/20 hover:text-yellow-100"
+            >
+              <Link href="/transactions">
+                Back to Transactions
+              </Link>
             </Button>
             <h1 className="font-mono text-lg font-semibold text-foreground">
               {caseId}
@@ -239,7 +245,7 @@ function EscalateBar({
 
   if (escalated) {
     return (
-      <div className="mb-5 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
+      <div className="mb-6 flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
         <span className="size-2 shrink-0 rounded-full bg-destructive" />
         <span className="text-sm font-medium text-destructive">
           Case Escalated
@@ -252,7 +258,7 @@ function EscalateBar({
   }
 
   return (
-    <Card className="mb-5">
+    <Card className="mb-6">
       <CardContent className="flex items-center gap-4">
         <div>
           <p className="text-sm font-medium text-foreground">Escalate Case</p>
@@ -262,7 +268,7 @@ function EscalateBar({
         </div>
         <Button
           variant="destructive"
-          className="h-9 shrink-0 px-4"
+          className="h-10 shrink-0 cursor-pointer px-5"
           onClick={handleEscalate}
           disabled={submitting}
         >
@@ -308,7 +314,7 @@ function CaseDetails({
   return (
     <>
       {/* AI Summary */}
-      <Card className="mb-5">
+      <Card className="mb-6">
         <CardHeader className="border-b">
           <CardTitle>AI Summary</CardTitle>
           <CardAction>
@@ -331,7 +337,7 @@ function CaseDetails({
       </Card>
 
       {/* Message Customer */}
-      <Card className="mb-5">
+      <Card className="mb-6">
         <CardContent className="flex items-center gap-3">
           <div>
             <p className="text-sm font-medium text-foreground">
@@ -361,7 +367,7 @@ function CaseDetails({
               {caseData.messageSent ? "Sent" : "Not sent"}
             </span>
             <Button
-              className="h-9 px-4"
+              className="h-10 cursor-pointer px-5"
               onClick={handleSendMessage}
               disabled={caseData.messageSent || sending}
             >
@@ -372,7 +378,7 @@ function CaseDetails({
       </Card>
 
       {/* Case Details grid */}
-      <Card className="mb-5 overflow-hidden py-0">
+      <Card className="mb-6 overflow-hidden">
         <CardHeader className="border-b">
           <CardTitle>Case Details</CardTitle>
         </CardHeader>
@@ -549,7 +555,7 @@ function AuditLog({ caseData }: { caseData: CaseData }) {
   const events = buildAuditEvents(caseData);
 
   return (
-    <Card className="mb-5">
+    <Card className="mb-6">
       <CardHeader className="border-b">
         <CardTitle>Audit Log</CardTitle>
       </CardHeader>
@@ -623,7 +629,7 @@ function NotesSection({
   };
 
   return (
-    <Card className="mb-5">
+    <Card className="mb-6">
       <CardHeader className="border-b">
         <CardTitle>Notes</CardTitle>
         <CardAction>
@@ -642,7 +648,7 @@ function NotesSection({
         />
         <div className="mt-2 flex justify-end">
           <Button
-            className="h-9 px-4"
+            className="h-10 cursor-pointer px-5"
             onClick={handleSave}
             disabled={saving || !draft.trim()}
           >
@@ -651,12 +657,12 @@ function NotesSection({
         </div>
         {sorted.length > 0 && (
           <>
-            <div className="mt-4 border-t border-border" />
+            <div className="mt-4 border-t border-border/40" />
             <div className="mt-4 space-y-2.5">
               {sorted.map((entry, idx) => (
                 <div
                   key={`${entry.savedAt}-${idx}`}
-                  className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5"
+                  className="rounded-lg bg-muted/20 px-3 py-2.5"
                 >
                   <div className="mb-1 text-xs text-muted-foreground">
                     {entry.savedAt
@@ -844,7 +850,7 @@ function ResolveSection({
   };
 
   return (
-    <Card className="mb-5">
+    <Card className="mb-6">
       <CardHeader className="border-b">
         <CardTitle>Resolve Case</CardTitle>
       </CardHeader>
@@ -862,7 +868,7 @@ function ResolveSection({
 
         {!resolved && (
           <div>
-            <Button className="h-9 px-4" onClick={handleResolve} disabled={resolving}>
+            <Button className="h-10 cursor-pointer px-5" onClick={handleResolve} disabled={resolving}>
               {resolving ? "Resolving…" : "Resolve Case"}
             </Button>
           </div>
@@ -883,11 +889,14 @@ function ResolveSection({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" className="h-9 px-4" asChild>
-                <Link href="/transactions">← Back to Transactions</Link>
-              </Button>
+              <Link
+                href="/transactions"
+                className="inline-flex cursor-pointer items-center text-sm text-muted-foreground hover:text-foreground"
+              >
+                ← Back to Transactions
+              </Link>
               {caseData.autoAssignOnResolve && (
-                <Button className="h-9 px-4" onClick={handleGetNewCase} disabled={assigning}>
+                <Button className="h-10 cursor-pointer px-5" onClick={handleGetNewCase} disabled={assigning}>
                   {assigning ? "Assigning…" : "Get New Case"}
                 </Button>
               )}

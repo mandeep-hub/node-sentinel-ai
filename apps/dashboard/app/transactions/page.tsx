@@ -5,7 +5,6 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import LogoutButton from "@/components/ui/LogoutButton";
 
 interface CurrencyRef {
@@ -148,10 +147,10 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-6 py-8 text-foreground">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="flex min-h-screen justify-center bg-background text-foreground">
+      <div className="w-full max-w-6xl space-y-8 px-6 py-8">
         {/* Page header */}
-        <div className="mb-6 flex items-start justify-between">
+        <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-semibold text-foreground">
@@ -181,33 +180,31 @@ export default function TransactionsPage() {
         )}
 
         {/* Case queue action bar */}
-        <Card className="mb-8">
-          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-9 items-center rounded-lg border border-yellow-400/30 bg-yellow-400/90 px-4 text-sm font-medium text-black">
-                {openCases === 0
-                  ? "No open cases"
-                  : `${openCases} open ${caseLabel}`}
-              </span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex cursor-default items-center rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-sm font-medium text-yellow-300">
+              {openCases === 0
+                ? "No open cases"
+                : `${openCases} open ${caseLabel}`}
+            </span>
 
-              {assignedCase ? (
-                <Button
-                  className="h-9 rounded-lg bg-yellow-500 px-4 text-sm font-semibold text-black hover:bg-yellow-400"
-                  asChild
-                >
-                  <a href={`/cases/${assignedCase.caseId}`}>View my case →</a>
-                </Button>
-              ) : (
-                <Button
-                  onClick={requestCase}
-                  className="h-9 rounded-lg bg-yellow-500 px-4 text-sm font-semibold text-black hover:bg-yellow-400"
-                >
-                  Request new case
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            {assignedCase ? (
+              <Button
+                className="h-10 cursor-pointer rounded-lg bg-yellow-500 px-5 text-sm font-semibold text-black hover:bg-yellow-400"
+                asChild
+              >
+                <a href={`/cases/${assignedCase.caseId}`}>View my case →</a>
+              </Button>
+            ) : (
+              <Button
+                onClick={requestCase}
+                className="h-10 cursor-pointer rounded-lg bg-yellow-500 px-5 text-sm font-semibold text-black hover:bg-yellow-400"
+              >
+                Request new case
+              </Button>
+            )}
+          </div>
+        </div>
 
         {/* Transaction table */}
         {loading && transactions.length === 0 ? (
@@ -223,8 +220,8 @@ export default function TransactionsPage() {
             </p>
           </div>
         ) : (
-          <>
-            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{transactions.length.toLocaleString()} transactions</span>
               {flaggedCount > 0 && (
                 <>
@@ -239,7 +236,7 @@ export default function TransactionsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="py-3 pl-5 pr-4 text-left font-medium text-muted-foreground">
                       Tx ID
                     </th>
 
@@ -259,7 +256,7 @@ export default function TransactionsPage() {
                       Credit
                     </th>
 
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="py-3 pl-6 pr-4 text-left font-medium text-muted-foreground">
                       Status
                     </th>
 
@@ -271,7 +268,7 @@ export default function TransactionsPage() {
                       Profession
                     </th>
 
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                    <th className="py-3 pl-4 pr-5 text-left font-medium text-muted-foreground">
                       Date
                     </th>
                   </tr>
@@ -297,7 +294,7 @@ export default function TransactionsPage() {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.25, ease: "easeOut" }}
                       >
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                        <td className="py-3 pl-5 pr-4 font-mono text-xs text-muted-foreground">
                           {tx.id.length > 12
                             ? `${tx.id.slice(0, 12)}…`
                             : tx.id}
@@ -325,7 +322,7 @@ export default function TransactionsPage() {
                           />
                         </td>
 
-                        <td className="px-4 py-3">
+                        <td className="py-3 pl-6 pr-4">
                           <StatusBadge
                             status={tx.status}
                             flagReason={tx.flagReason}
@@ -343,7 +340,7 @@ export default function TransactionsPage() {
                           {tx.profession ?? "—"}
                         </td>
 
-                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                        <td className="py-3 pl-4 pr-5 text-xs text-muted-foreground">
                           {new Date(tx.createdAt).toLocaleString()}
                         </td>
                       </motion.tr>
@@ -352,7 +349,7 @@ export default function TransactionsPage() {
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
