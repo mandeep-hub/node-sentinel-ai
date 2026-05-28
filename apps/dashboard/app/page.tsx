@@ -25,7 +25,7 @@ export default async function Home() {
           </p>
           <div className="flex gap-2">
             <Button
-              className="bg-yellow-600 hover:bg-yellow-300 text-black font-semibold"
+              className="bg-yellow-600 hover:bg-yellow-300 text-black font-semibold !px-10"
               asChild
             >
               <a href="/transactions">Dashboard</a>
